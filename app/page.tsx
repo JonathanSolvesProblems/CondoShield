@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -8,7 +10,7 @@ import { DisputeGenerator } from './components/DisputeGenerator';
 import { useTranslation } from './hooks/useLanguage';
 import { Language, Assessment } from './types';
 
-function App() {
+export default function Home() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [language, setLanguage] = useState<Language>('en');
   const { t } = useTranslation(language);
@@ -92,5 +94,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

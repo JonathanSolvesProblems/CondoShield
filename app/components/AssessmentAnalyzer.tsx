@@ -16,6 +16,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Pie,
 } from "recharts";
 import { AssessmentItem } from "../types";
 
@@ -29,57 +30,47 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AssessmentItem[] | null>(null);
   const [dragActive, setDragActive] = useState(false);
-
-  // Mock analysis results
-  const mockResults: AssessmentItem[] = [
-    {
-      category: "Pool Renovation",
-      amount: 850,
-      description: "Pool resurfacing and equipment upgrade",
-      questionable: false,
-    },
-    {
-      category: "Legal Fees",
-      amount: 300,
-      description: "Attorney consultation fees",
-      questionable: true,
-    },
-    {
-      category: "Administrative Fee",
-      amount: 75,
-      description: "Processing and handling charges",
-      questionable: true,
-    },
-    {
-      category: "Emergency Repairs",
-      amount: 200,
-      description: "Plumbing emergency repair",
-      questionable: false,
-    },
-    {
-      category: "Late Fee",
-      amount: 50,
-      description: "Late payment penalty",
-      questionable: true,
-    },
-  ];
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    const file = files[0];
+    
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.type.includes('image')) {
+      setError('Please upload a PDF or image file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+
     setAnalyzing(true);
+    setError(null);
+    
     const formData = new FormData();
-    formData.append("file", files[0]);
+    formData.append("file", file);
 
     try {
-      const res = await fetch("/api/analyze-pdf", {
+      const response = await fetch("/api/analyze-pdf", {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze file');
+      }
+
+      const data = await response.json();
       setResults(data);
     } catch (err) {
       console.error("Analysis failed", err);
+      setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setAnalyzing(false);
     }
@@ -152,6 +143,12 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                 {t("analyzer.manual")}
               </button>
             </div>
+
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
 
             <div
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
@@ -295,7 +292,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                         <stop offset="100%" stopColor="#D97706" />
                       </linearGradient>
                     </defs>
-                    <pie
+                    <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
@@ -314,7 +311,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                           }
                         />
                       ))}
-                    </pie>
+                    </Pie>
                     <Tooltip
                       formatter={(value) =>
                         `$${Number(value).toLocaleString()}`
@@ -362,9 +359,6 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                     />
                     <Bar
                       dataKey="amount"
-                      fill={(data: any) =>
-                        data.questionable ? "#F59E0B" : "#10B981"
-                      }
                       radius={[4, 4, 0, 0]}
                     >
                       {barData.map((entry, index) => (
@@ -432,7 +426,10 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4">
             <button
-              onClick={() => setResults(null)}
+              onClick={() => {
+                setResults(null);
+                setError(null);
+              }}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
             >
               Analyze Another
