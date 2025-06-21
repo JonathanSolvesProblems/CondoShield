@@ -16,6 +16,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Pie,
 } from "recharts";
 import { AssessmentItem } from "../types";
 
@@ -29,13 +30,30 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AssessmentItem[] | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    const file = files[0];
+    
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.type.includes('image')) {
+      setError('Please upload a PDF or image file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+
     setAnalyzing(true);
+    setError(null);
+    
     const formData = new FormData();
-    formData.append("file", files[0]);
+    formData.append("file", file);
 
     try {
       const response = await fetch("/api/analyze-pdf", {
@@ -43,26 +61,16 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
         body: formData,
       });
 
-      const text = await response.text();
-
       if (!response.ok) {
-        console.error("Server responded with error:", text);
-        throw new Error("Failed to analyze file");
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze file');
       }
 
-      console.log("Raw analysis response:", text);
-      const data = JSON.parse(text);
+      const data = await response.json();
       setResults(data);
     } catch (err) {
       console.error("Analysis failed", err);
-      const errorMsg =
-        typeof err === "string"
-          ? err
-          : err instanceof Error
-          ? err.message
-          : JSON.stringify(err, null, 2);
-
-      alert(`Analysis failed: ${errorMsg}`);
+      setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setAnalyzing(false);
     }
@@ -88,21 +96,11 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
     }
   };
 
-  const totalAmount =
-    results?.reduce(
-      (sum, item) => sum + (typeof item.amount === "number" ? item.amount : 0),
-      0
-    ) || 0;
-
+  const totalAmount = results?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const questionableAmount =
     results
       ?.filter((item) => item.questionable)
-      .reduce(
-        (sum, item) =>
-          sum + (typeof item.amount === "number" ? item.amount : 0),
-        0
-      ) || 0;
-
+      .reduce((sum, item) => sum + item.amount, 0) || 0;
   const normalAmount = totalAmount - questionableAmount;
 
   const pieData = [
@@ -145,6 +143,12 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                 {t("analyzer.manual")}
               </button>
             </div>
+
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
 
             <div
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
@@ -288,7 +292,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                         <stop offset="100%" stopColor="#D97706" />
                       </linearGradient>
                     </defs>
-                    <pie
+                    <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
@@ -307,7 +311,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                           }
                         />
                       ))}
-                    </pie>
+                    </Pie>
                     <Tooltip
                       formatter={(value) =>
                         `$${Number(value).toLocaleString()}`
@@ -355,9 +359,6 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                     />
                     <Bar
                       dataKey="amount"
-                      fill={(data: any) =>
-                        data.questionable ? "#F59E0B" : "#10B981"
-                      }
                       radius={[4, 4, 0, 0]}
                     >
                       {barData.map((entry, index) => (
@@ -404,13 +405,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                           {item.category}
                         </h5>
                         <span className="text-lg font-bold text-gray-900">
-                          {typeof item.amount === "number" ? (
-                            `$${item.amount.toLocaleString()}`
-                          ) : (
-                            <span className="text-sm text-gray-500 italic">
-                              No amount
-                            </span>
-                          )}
+                          ${item.amount.toLocaleString()}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
@@ -431,7 +426,10 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4">
             <button
-              onClick={() => setResults(null)}
+              onClick={() => {
+                setResults(null);
+                setError(null);
+              }}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
             >
               Analyze Another
