@@ -1,23 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ThumbsUp, MessageSquare, ArrowLeft } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 import { CommunityPost } from "../types";
 
 interface PostDetailProps {
   post: CommunityPost;
   onBack: () => void;
   onUpvote: (id: number) => void;
+  onReplyPosted: () => void;
 }
 
 export const PostDetail: React.FC<PostDetailProps> = ({
   post,
   onBack,
   onUpvote,
+  onReplyPosted,
 }) => {
   const [reply, setReply] = useState("");
+  const [replies, setReplies] = useState<any[]>([]);
 
-  const handleReplySubmit = () => {
-    alert(`Reply submitted: ${reply}`);
+  useEffect(() => {
+    const fetchReplies = async () => {
+      const { data, error } = await supabase
+        .from("post_replies")
+        .select("*")
+        .eq("post_id", post.id)
+        .order("created_at", { ascending: false }); // latest first
+
+      if (!error) setReplies(data);
+    };
+
+    fetchReplies();
+  }, [post.id]);
+
+  const handleReplySubmit = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return alert("You must be logged in to reply.");
+
+    const { error } = await supabase.from("post_replies").insert({
+      post_id: post.id,
+      user_id: user.id,
+      author: user.user_metadata.display_name || user.email,
+      content: reply,
+    });
+
+    if (error) return alert(error.message);
+
+    // Optionally increment reply count on post
+    await supabase
+      .from("community_posts")
+      .update({ replies: post.replies + 1 })
+      .eq("id", post.id);
+
+    setReplies([
+      {
+        author: user.user_metadata.display_name || user.email,
+        content: reply,
+        created_at: new Date().toISOString(),
+      },
+      ...replies,
+    ]);
     setReply("");
+    onReplyPosted();
   };
 
   return (
@@ -66,6 +110,22 @@ export const PostDetail: React.FC<PostDetailProps> = ({
         >
           Submit
         </button>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Replies</h3>
+        {replies.length === 0 && (
+          <p className="text-gray-500">No replies yet. Be the first!</p>
+        )}
+        {replies.map((r, index) => (
+          <div key={index} className="border-t pt-3 mt-3">
+            <p className="text-sm text-gray-500">
+              <strong>{r.author}</strong> •{" "}
+              {new Date(r.created_at).toLocaleString()}
+            </p>
+            <p className="text-gray-700">{r.content}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -34,17 +34,40 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchPosts = async () => {
+    const { data: posts, error } = await supabase
+      .from("community_posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error || !posts) return setLoading(false);
+
+    // Fetch reply counts for all posts
+    const replyCounts = await Promise.all(
+      posts.map(async (post) => {
+        const { count, error } = await supabase
+          .from("post_replies")
+          .select("*", { count: "exact", head: true })
+          .eq("post_id", post.id);
+
+        return { postId: post.id, count: error ? 0 : count || 0 };
+      })
+    );
+
+    // Merge counts back into posts
+    const postsWithCounts = posts.map((post) => {
+      const match = replyCounts.find((r) => r.postId === post.id);
+      return {
+        ...post,
+        replies: match?.count ?? 0,
+      };
+    });
+
+    setPosts(postsWithCounts as CommunityPost[]);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchPosts = async () => {
-      const { data, error } = await supabase
-        .from("community_posts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error && data) setPosts(data as CommunityPost[]);
-      setLoading(false);
-    };
-
     fetchPosts();
   }, []);
 
@@ -178,6 +201,7 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
               post={posts.find((p) => p.id === selectedPost.id)!}
               onBack={() => setSelectedPost(null)}
               onUpvote={handleUpvote}
+              onReplyPosted={fetchPosts}
             />
           ) : (
             <>
@@ -275,12 +299,12 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
         <NewPostModal
           onClose={() => setShowNewPostModal(false)}
           onPostCreated={async () => {
-            const { data } = await supabase
-              .from("community_posts")
+            const { data, error } = await supabase
+              .from("community_posts_with_reply_counts")
               .select("*")
               .order("created_at", { ascending: false });
 
-            if (data) setPosts(data as CommunityPost[]);
+            if (!error && data) setPosts(data as CommunityPost[]);
           }}
         />
       )}
