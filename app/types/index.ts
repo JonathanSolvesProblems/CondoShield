@@ -36,7 +36,7 @@ export interface DisputeLetter {
 }
 
 export interface CommunityPost {
-  id: string;
+  id: number;
   title: string;
   content: string;
   user_id: any;

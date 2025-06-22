@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Shield, Globe } from "lucide-react";
 import { Language } from "../types";
-import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { AuthModal } from "./AuthModal";
 
@@ -27,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: "community", label: t("nav.community") },
     { id: "generator", label: t("nav.generator") },
   ];
+
   const [user, setUser] = useState<any>(null);
   const [showAuth, setShowAuth] = useState(false);
 
@@ -49,13 +49,13 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between h-auto py-4 w-full flex-wrap md:flex-nowrap gap-y-4">
+          {/* Left: Logo */}
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <div className="bg-blue-600 p-2 rounded-lg">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <div>
+            <div className="flex flex-col justify-center">
               <h1 className="text-xl font-bold text-gray-900">
                 {t("app.title")}
               </h1>
@@ -65,8 +65,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          {/* Center: Navigation */}
+          <nav className="hidden md:flex flex-1 justify-center space-x-4">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -82,41 +82,38 @@ export const Header: React.FC<HeaderProps> = ({
             ))}
           </nav>
 
-          {/* Language Toggle */}
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <button
-                onClick={() =>
-                  onLanguageChange(language === "en" ? "fr" : "en")
-                }
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md transition-colors"
-              >
-                <Globe className="h-4 w-4" />
-                <span className="font-medium">{language.toUpperCase()}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {user ? (
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="px-3 py-2 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
+          {/* Right: Language + Login/Logout */}
+          <div className="flex items-center space-x-4 flex-shrink-0">
             <button
-              onClick={() => setShowAuth(true)}
-              className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => onLanguageChange(language === "en" ? "fr" : "en")}
+              className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md transition-colors"
             >
-              Login
+              <Globe className="h-4 w-4" />
+              <span className="font-medium">{language.toUpperCase()}</span>
             </button>
-          )}
+
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {user.user_metadata?.display_name || "Anonymous"}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Login
+              </button>
+            )}
+          </div>
+
           {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
         </div>
 
