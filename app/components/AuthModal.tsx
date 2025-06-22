@@ -5,13 +5,23 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [displayName, setDisplayName] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const { error } =
       mode === "login"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                display_name: displayName,
+              },
+            },
+          });
 
     if (error) alert(error.message);
     else onClose();
@@ -31,6 +41,16 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
           {mode === "login" ? "Log In" : "Sign Up"}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {mode === "signup" && (
+            <input
+              type="text"
+              className="w-full border px-3 py-2 rounded"
+              placeholder="Display Name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              required
+            />
+          )}
           <input
             type="email"
             className="w-full border px-3 py-2 rounded"

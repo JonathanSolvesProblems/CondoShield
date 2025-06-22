@@ -98,6 +98,28 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">{user.email}</span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-2 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Login
+            </button>
+          )}
+          {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+        </div>
+
         {/* Mobile Navigation */}
         <div className="md:hidden border-t border-gray-200 py-3">
           <div className="flex space-x-4 overflow-x-auto">
@@ -117,25 +139,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
-      {user ? (
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-600">{user.email}</span>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-2 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
-          >
-            Logout
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowAuth(true)}
-          className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Login
-        </button>
-      )}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </header>
   );
 };

@@ -39,12 +39,13 @@ export interface CommunityPost {
   id: string;
   title: string;
   content: string;
-  author: string;
+  user_id: any;
   region: string;
   upvotes: number;
   replies: number;
   timestamp: string;
   category: 'warning' | 'success' | 'question' | 'advice';
+  author: string;
 }
 
 export type Language = 'en' | 'fr';
