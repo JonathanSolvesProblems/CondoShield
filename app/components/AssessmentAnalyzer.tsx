@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Upload,
   FileText,
@@ -19,10 +19,27 @@ import {
   Pie,
 } from "recharts";
 import { AssessmentItem } from "../types";
+import { supabase } from "../lib/supabaseClient";
 
 interface AssessmentAnalyzerProps {
   t: (key: string) => string;
 }
+
+const saveAnalysisToDB = async (
+  results: AssessmentItem[],
+  fileName: string
+) => {
+  const user = (await supabase.auth.getUser()).data.user;
+
+  if (user) {
+    await supabase.from("assessment_analyses").upsert({
+      user_id: user.id,
+      uploaded_file_name: fileName,
+      results: results,
+      updated_at: new Date().toISOString(),
+    });
+  }
+};
 
 export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   t,
@@ -32,26 +49,52 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const loadLatestAnalysis = async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("assessment_analyses")
+        .select("results")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(); // 👈 avoid 406 when no rows
+
+      if (error && error.code !== "PGRST116") {
+        // Only log real errors, not "no rows"
+        console.error("Failed to load analysis:", error.message);
+      }
+
+      if (data?.results) {
+        setResults(data.results);
+      }
+    };
+
+    loadLatestAnalysis();
+  }, []);
+
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    
+
     // Validate file type
-    if (!file.type.includes('pdf') && !file.type.includes('image')) {
-      setError('Please upload a PDF or image file');
+    if (!file.type.includes("pdf") && !file.type.includes("image")) {
+      setError("Please upload a PDF or image file");
       return;
     }
 
     // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
+      setError("File size must be less than 10MB");
       return;
     }
 
     setAnalyzing(true);
     setError(null);
-    
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -63,14 +106,15 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze file');
+        throw new Error(errorData.error || "Failed to analyze file");
       }
 
       const data = await response.json();
       setResults(data);
+      await saveAnalysisToDB(data, file.name);
     } catch (err) {
       console.error("Analysis failed", err);
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
       setAnalyzing(false);
     }
@@ -357,10 +401,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
                         `$${Number(value).toLocaleString()}`
                       }
                     />
-                    <Bar
-                      dataKey="amount"
-                      radius={[4, 4, 0, 0]}
-                    >
+                    <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
                       {barData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
