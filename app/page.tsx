@@ -35,6 +35,8 @@ export default function Home() {
   const [suggestionsMap, setSuggestionsMap] = useState<
     Record<string, CostSavingSuggestion[]>
   >({});
+  const [selectedSavingAssessmentId, setSelectedSavingAssessmentId] =
+    useState<string>("");
 
   useEffect(() => {
     const fetchLatestAnalysis = async () => {
@@ -202,6 +204,10 @@ export default function Home() {
     );
   };
 
+  const totalSavings = Object.values(suggestionsMap)
+    .flat()
+    .reduce((sum, s) => sum + (s.estimated_savings || 0), 0);
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case "dashboard":
@@ -217,9 +223,12 @@ export default function Home() {
             disputes={disputes}
             setDisputes={setDisputes}
             userActivityLogs={userActivityLogs}
-            savedAmount={Object.values(suggestionsMap)
-              .flat()
-              .reduce((sum, s) => sum + (s.estimated_savings || 0), 0)}
+            savedAmount={totalSavings}
+            suggestionsMap={suggestionsMap}
+            onViewSavings={(assessment) => {
+              setSelectedSavingAssessmentId(assessment.id);
+              setCurrentPage("costsaving");
+            }}
           />
         );
       case "analyzer":
@@ -251,6 +260,7 @@ export default function Home() {
             t={t}
             assessments={assessments}
             previousSuggestions={suggestionsMap}
+            initialSelectedId={selectedSavingAssessmentId}
           />
         );
       default:
@@ -265,7 +275,12 @@ export default function Home() {
           disputes={disputes}
           setDisputes={setDisputes}
           userActivityLogs={userActivityLogs}
-          savedAmount={totalSavedAmount}
+          savedAmount={totalSavings}
+          suggestionsMap={suggestionsMap}
+          onViewSavings={(assessment) => {
+            setSelectedSavingAssessmentId(assessment.id);
+            setCurrentPage("costsaving");
+          }}
         />;
     }
   };

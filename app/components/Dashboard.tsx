@@ -7,7 +7,7 @@ import {
   Calendar,
   FileText,
 } from "lucide-react";
-import { Assessment, DisputeLetter } from "../types";
+import { Assessment, CostSavingSuggestion, DisputeLetter } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { DisputesModal } from "./DisputesModal";
 import { AssessmentsModal } from "./AssessmentsModal";
@@ -21,6 +21,8 @@ interface DashboardProps {
   setDisputes: React.Dispatch<React.SetStateAction<DisputeLetter[]>>;
   userActivityLogs: any[];
   savedAmount: number;
+  suggestionsMap: Record<string, CostSavingSuggestion[]>;
+  onViewSavings: (assessment: Assessment) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -32,6 +34,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setDisputes,
   userActivityLogs,
   savedAmount,
+  suggestionsMap,
+  onViewSavings,
 }) => {
   const totalAssessments = assessments.length;
   const activeDisputes = disputes.length;
@@ -340,12 +344,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {isAssessmentsOpen && (
         <AssessmentsModal
           assessments={assessments}
+          suggestionsMap={suggestionsMap}
           onClose={() => setIsAssessmentsOpen(false)}
           onSelect={(assessment) => {
             onAssessmentSelect(assessment);
             setIsAssessmentsOpen(false);
           }}
           onDelete={handleDeleteAssessment}
+          onViewSavings={(assessment) => {
+            onViewSavings(assessment);
+            setIsAssessmentsOpen(false);
+          }}
         />
       )}
     </div>

@@ -7,20 +7,30 @@ interface CostSavingSuggestionGeneratorProps {
   t: (key: string) => string;
   assessments: Assessment[];
   previousSuggestions: Record<string, CostSavingSuggestion[]>;
+  initialSelectedId?: string;
 }
 
 export const CostSavingSuggestionGenerator: React.FC<
   CostSavingSuggestionGeneratorProps
-> = ({ t, assessments, previousSuggestions }) => {
+> = ({ t, assessments, previousSuggestions, initialSelectedId }) => {
   const [selectedId, setSelectedId] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (initialSelectedId) {
+      setSelectedId(initialSelectedId);
+    }
+  }, [initialSelectedId]);
+
+  useEffect(() => {
     if (selectedId && previousSuggestions[selectedId]) {
       const combined = previousSuggestions[selectedId]
-        .map((s) => s.suggestion)
-        .join("\n\n---\n\n");
+        .map(
+          (s) =>
+            `• ${s.suggestion} (Save $${s.estimated_savings?.toLocaleString()})`
+        )
+        .join("\n\n");
       setSuggestion(combined);
     } else {
       setSuggestion(null);
