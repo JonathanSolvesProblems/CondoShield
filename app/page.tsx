@@ -6,7 +6,7 @@ import { Dashboard } from "./components/Dashboard";
 import { AssessmentAnalyzer } from "./components/AssessmentAnalyzer";
 import { LegalAssistant } from "./components/LegalAssistant";
 import { Community } from "./components/Community";
-import { DisputeGenerator } from "./components/DisputeGenerator";
+import { CostSavingSuggestionGenerator } from "./components/CostSavingSuggestionGenerator";
 import { useTranslation } from "./hooks/useLanguage";
 import {
   Language,
@@ -14,6 +14,7 @@ import {
   DisputeLetter,
   AssessmentItem,
   CommunityPost,
+  CostSavingSuggestion,
 } from "./types";
 import { supabase } from "./lib/supabaseClient";
 
@@ -31,6 +32,9 @@ export default function Home() {
   );
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [suggestionsMap, setSuggestionsMap] = useState<
+    Record<string, CostSavingSuggestion[]>
+  >({});
 
   useEffect(() => {
     const fetchLatestAnalysis = async () => {
@@ -113,6 +117,37 @@ export default function Home() {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+
+      const { data: suggestions, error } = await supabase
+        .from("cost_saving_suggestions")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Failed to fetch cost saving suggestions:", error);
+        return;
+      }
+
+      // Group suggestions by assessment_id
+      const map: Record<string, CostSavingSuggestion[]> = {};
+      suggestions?.forEach((s) => {
+        if (!map[s.assessment_id]) {
+          map[s.assessment_id] = [];
+        }
+        map[s.assessment_id].push(s);
+      });
+
+      setSuggestionsMap(map);
+    };
+
+    fetchSuggestions();
+  }, []);
+
   const fetchPosts = async () => {
     setLoading(true);
     const { data: postsData, error } = await supabase
@@ -182,6 +217,9 @@ export default function Home() {
             disputes={disputes}
             setDisputes={setDisputes}
             userActivityLogs={userActivityLogs}
+            savedAmount={Object.values(suggestionsMap)
+              .flat()
+              .reduce((sum, s) => sum + (s.estimated_savings || 0), 0)}
           />
         );
       case "analyzer":
@@ -207,8 +245,14 @@ export default function Home() {
             refreshPosts={fetchPosts}
           />
         );
-      case "generator":
-        return <DisputeGenerator t={t} assessments={assessments} />;
+      case "costsaving":
+        return (
+          <CostSavingSuggestionGenerator
+            t={t}
+            assessments={assessments}
+            previousSuggestions={suggestionsMap}
+          />
+        );
       default:
         <Dashboard
           t={t}
@@ -221,6 +265,7 @@ export default function Home() {
           disputes={disputes}
           setDisputes={setDisputes}
           userActivityLogs={userActivityLogs}
+          savedAmount={totalSavedAmount}
         />;
     }
   };

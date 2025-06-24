@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: "analyzer", label: t("nav.analyzer") },
     { id: "legal", label: t("nav.legal") },
     { id: "community", label: t("nav.community") },
-    { id: "generator", label: t("nav.generator") },
+    { id: "costsaving", label: t("nav.costsavings") },
   ];
 
   const [user, setUser] = useState<any>(null);

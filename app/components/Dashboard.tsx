@@ -20,6 +20,7 @@ interface DashboardProps {
   disputes: DisputeLetter[];
   setDisputes: React.Dispatch<React.SetStateAction<DisputeLetter[]>>;
   userActivityLogs: any[];
+  savedAmount: number;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -30,6 +31,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   disputes,
   setDisputes,
   userActivityLogs,
+  savedAmount,
 }) => {
   const totalAssessments = assessments.length;
   const activeDisputes = disputes.length;
@@ -51,7 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return total + sum;
   }, 0);
 
-  const savedAmount = 2500; // Mock saved amount
+  const savedAmountFormatted = (savedAmount ?? 0).toLocaleString();
 
   const markResolved = async (id: string) => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -217,7 +219,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {t("dashboard.savedAmount")}
               </p>
               <p className="text-3xl font-bold text-green-600">
-                ${savedAmount.toLocaleString()}
+                ${savedAmountFormatted}
               </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
