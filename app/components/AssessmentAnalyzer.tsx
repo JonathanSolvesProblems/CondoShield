@@ -18,11 +18,14 @@ import {
   Tooltip,
   Pie,
 } from "recharts";
-import { AssessmentItem } from "../types";
+import { Assessment, AssessmentItem } from "../types";
 import { supabase } from "../lib/supabaseClient";
+import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
+import { logUserActivity } from "../lib/activityLogger";
 
 interface AssessmentAnalyzerProps {
   t: (key: string) => string;
+  selectedAssessment?: Assessment | null;
 }
 
 const saveAnalysisToDB = async (
@@ -43,6 +46,7 @@ const saveAnalysisToDB = async (
 
 export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   t,
+  selectedAssessment,
 }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AssessmentItem[] | null>(null);
@@ -50,30 +54,12 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadLatestAnalysis = async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("assessment_analyses")
-        .select("results")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(); // 👈 avoid 406 when no rows
-
-      if (error && error.code !== "PGRST116") {
-        // Only log real errors, not "no rows"
-        console.error("Failed to load analysis:", error.message);
-      }
-
-      if (data?.results) {
-        setResults(data.results);
-      }
-    };
-
-    loadLatestAnalysis();
-  }, []);
+    if (selectedAssessment?.breakdown) {
+      setResults(selectedAssessment.breakdown);
+    } else {
+      setResults(null);
+    }
+  }, [selectedAssessment]);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -111,7 +97,20 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
 
       const data = await response.json();
       setResults(data);
+
       await saveAnalysisToDB(data, file.name);
+      const user = (await supabase.auth.getUser()).data.user;
+
+      if (user) {
+        await logUserActivity({
+          userId: user.id,
+          type: "assessment",
+          title: "New Special Assessment Analyzed",
+          description: `File analyzed: ${file.name}, total amount: $${data
+            .reduce((sum, item) => sum + item.amount, 0)
+            .toLocaleString()}`,
+        });
+      }
     } catch (err) {
       console.error("Analysis failed", err);
       setError(err instanceof Error ? err.message : "Analysis failed");
@@ -162,6 +161,22 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
       amount: item.amount,
       questionable: item.questionable,
     })) || [];
+
+  const toAssessments = (items: AssessmentItem[]): Assessment[] => {
+    return [
+      {
+        id: "auto-generated-" + Date.now(), // unique ID for tracking
+        title: "Assessment Analysis", // or extract a better title if available
+        amount: items.reduce((sum, item) => sum + item.amount, 0),
+        dueDate: new Date().toISOString().split("T")[0], // fallback to today
+        status: "disputed", // or default to "pending"
+        description: "Auto-generated assessment from uploaded analysis.",
+        breakdown: items, // this is your original results
+        region: "Default Region", // you can later prompt or infer this
+        dateReceived: new Date().toISOString().split("T")[0],
+      },
+    ];
+  };
 
   return (
     <div className="space-y-6">
@@ -475,12 +490,46 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
             >
               Analyze Another
             </button>
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-              Generate Dispute Letter
-            </button>
+            <DisputeLetterGenerator aiText={generateDisputeSummary(results)} />
           </div>
         </div>
       )}
     </div>
   );
 };
+
+function generateDisputeSummary(
+  items: {
+    amount: number;
+    category: string;
+    description: string;
+    questionable: boolean;
+  }[]
+): string {
+  const questionableItems = items.filter((item) => item.questionable);
+
+  if (questionableItems.length === 0) {
+    return "After reviewing the financial breakdown, I found no questionable charges.";
+  }
+
+  const total = questionableItems.reduce((sum, item) => sum + item.amount, 0);
+  const lines = questionableItems.map(
+    (item) =>
+      `- ${item.description} (${
+        item.category
+      }): $${item.amount.toLocaleString()}`
+  );
+
+  return [
+    `Subject: Dispute of Questionable Condo Charges`,
+    ``,
+    `I have reviewed the financial statement and identified the following charges that I believe require clarification or justification:`,
+    ``,
+    ...lines,
+    ``,
+    `These charges amount to a total of $${total.toLocaleString()}.`,
+    `Please provide a detailed explanation, supporting documentation, and justification for each of these charges. If these cannot be justified, I request they be removed or corrected.`,
+    ``,
+    `Thank you.`,
+  ].join("\n");
+}

@@ -1,81 +1,157 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Header } from './components/Header';
-import { Dashboard } from './components/Dashboard';
-import { AssessmentAnalyzer } from './components/AssessmentAnalyzer';
-import { LegalAssistant } from './components/LegalAssistant';
-import { Community } from './components/Community';
-import { DisputeGenerator } from './components/DisputeGenerator';
-import { useTranslation } from './hooks/useLanguage';
-import { Language, Assessment } from './types';
+import React, { useEffect, useState } from "react";
+import { Header } from "./components/Header";
+import { Dashboard } from "./components/Dashboard";
+import { AssessmentAnalyzer } from "./components/AssessmentAnalyzer";
+import { LegalAssistant } from "./components/LegalAssistant";
+import { Community } from "./components/Community";
+import { DisputeGenerator } from "./components/DisputeGenerator";
+import { useTranslation } from "./hooks/useLanguage";
+import { Language, Assessment, DisputeLetter, AssessmentItem } from "./types";
+import { supabase } from "./lib/supabaseClient";
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [language, setLanguage] = useState<Language>('en');
+  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [language, setLanguage] = useState<Language>("en");
   const { t } = useTranslation(language);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [selectedAssessment, setSelectedAssessment] =
+    useState<Assessment | null>(null);
+  const [disputes, setDisputes] = useState<DisputeLetter[]>([]);
+  const [userActivityLogs, setUserActivityLogs] = useState<any[]>([]);
+  const [latestAnalysis, setLatestAnalysis] = useState<AssessmentItem[] | null>(
+    null
+  );
 
-  // Mock data for assessments
-  const mockAssessments: Assessment[] = [
-    {
-      id: '1',
-      title: 'Pool Renovation Special Assessment',
-      amount: 1200,
-      dueDate: '2025-02-15',
-      status: 'pending',
-      description: 'Special assessment for pool renovation and equipment upgrade',
-      breakdown: [
-        { category: 'Pool Resurfacing', amount: 800, description: 'Pool surface repair and refinishing', questionable: false },
-        { category: 'Equipment Upgrade', amount: 300, description: 'New pool pump and filtration system', questionable: false },
-        { category: 'Administrative Fee', amount: 100, description: 'Processing and management fee', questionable: true }
-      ],
-      region: 'Miami, FL',
-      dateReceived: '2025-01-10'
-    },
-    {
-      id: '2',
-      title: 'Emergency Elevator Repair',
-      amount: 750,
-      dueDate: '2025-01-25',
-      status: 'disputed',
-      description: 'Emergency assessment for elevator repair',
-      breakdown: [
-        { category: 'Repair Service', amount: 600, description: 'Elevator repair and parts', questionable: false },
-        { category: 'Emergency Fee', amount: 150, description: 'After-hours service charge', questionable: true }
-      ],
-      region: 'Toronto, ON',
-      dateReceived: '2025-01-05'
-    },
-    {
-      id: '3',
-      title: 'Parking Lot Maintenance',
-      amount: 450,
-      dueDate: '2025-03-01',
-      status: 'pending',
-      description: 'Annual parking lot sealing and line painting',
-      breakdown: [
-        { category: 'Sealing Service', amount: 350, description: 'Asphalt sealing and crack repair', questionable: false },
-        { category: 'Line Painting', amount: 100, description: 'Parking space line repainting', questionable: false }
-      ],
-      region: 'Vancouver, BC',
-      dateReceived: '2025-01-12'
-    }
-  ];
+  useEffect(() => {
+    const fetchLatestAnalysis = async () => {
+      if (selectedAssessment) return; // If user selected an assessment, skip fetching latest
+
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("assessment_analyses")
+        .select("results")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Failed to load latest analysis:", error.message);
+        return;
+      }
+
+      if (data?.results) {
+        setLatestAnalysis(data.results);
+      }
+    };
+
+    const loadData = async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      // Fetch assessments
+      const { data: assessmentsData, error: assessmentsError } = await supabase
+        .from("assessment_analyses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (!assessmentsError && assessmentsData) {
+        // Your existing mapping logic
+        const mapped = assessmentsData.map((d) => {
+          const breakdown = d.results ?? [];
+          const amount = breakdown.reduce(
+            (sum: number, item: any) => sum + (item.amount || 0),
+            0
+          );
+          return {
+            ...d,
+            breakdown,
+            amount,
+            dateReceived: d.updated_at,
+          } as Assessment;
+        });
+        setAssessments(mapped);
+      }
+
+      // Fetch disputes
+      const { data: disputesData } = await supabase
+        .from("dispute_letters")
+        .select("*")
+        .eq("status", "active")
+        .eq("user_id", user.id);
+      setDisputes(disputesData ?? []);
+
+      // Fetch user activity logs
+      const { data: activityData, error: activityError } = await supabase
+        .from("user_activity_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("timestamp", { ascending: false })
+        .limit(10); // limit for performance, adjust as needed
+
+      if (activityError) {
+        console.error("Failed to fetch user activity logs:", activityError);
+      } else {
+        setUserActivityLogs(activityData ?? []);
+      }
+    };
+
+    loadData();
+    fetchLatestAnalysis();
+  }, []);
 
   const renderCurrentPage = () => {
     switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard t={t} assessments={mockAssessments} />;
-      case 'analyzer':
-        return <AssessmentAnalyzer t={t} />;
-      case 'legal':
+      case "dashboard":
+        return (
+          <Dashboard
+            t={t}
+            assessments={assessments}
+            setAssessments={setAssessments}
+            onAssessmentSelect={(assessment) => {
+              setSelectedAssessment(assessment);
+              setCurrentPage("analyzer");
+            }}
+            disputes={disputes}
+            setDisputes={setDisputes}
+            userActivityLogs={userActivityLogs}
+          />
+        );
+      case "analyzer":
+        return (
+          <AssessmentAnalyzer
+            selectedAssessment={
+              selectedAssessment ??
+              (latestAnalysis
+                ? ({ breakdown: latestAnalysis } as Assessment)
+                : null)
+            }
+            t={t}
+          />
+        );
+      case "legal":
         return <LegalAssistant t={t} />;
-      case 'community':
+      case "community":
         return <Community t={t} />;
-      case 'generator':
-        return <DisputeGenerator t={t} assessments={mockAssessments} />;
+      case "generator":
+        return <DisputeGenerator t={t} assessments={assessments} />;
       default:
-        return <Dashboard t={t} assessments={mockAssessments} />;
+        <Dashboard
+          t={t}
+          assessments={assessments}
+          setAssessments={setAssessments}
+          onAssessmentSelect={(assessment) => {
+            setSelectedAssessment(assessment);
+            setCurrentPage("analyzer");
+          }}
+          disputes={disputes}
+          setDisputes={setDisputes}
+          userActivityLogs={userActivityLogs}
+        />;
     }
   };
 
@@ -83,7 +159,10 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <Header
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          if (page !== "analyzer") setSelectedAssessment(null); // clear if navigating away
+        }}
         language={language}
         onLanguageChange={setLanguage}
         t={t}

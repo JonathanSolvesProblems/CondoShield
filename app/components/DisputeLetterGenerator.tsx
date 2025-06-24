@@ -4,11 +4,33 @@ import { FileText, X, Download, Mail } from "lucide-react";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { supabase } from "../lib/supabaseClient";
 
 interface DisputeLetterGeneratorProps {
   aiText: string;
   triggerText?: string;
 }
+
+const saveDisputeLetter = async (content: string, title?: string) => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) {
+    console.error("User not authenticated.");
+    return;
+  }
+
+  const insertData = {
+    content,
+    title: title || "Dispute Letter",
+    user_id: user.id,
+  };
+
+  const { data, error } = await supabase
+    .from("dispute_letters")
+    .insert([insertData]);
+
+  if (error) console.error("Error saving dispute letter:", error);
+  return data;
+};
 
 export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   aiText,
@@ -18,6 +40,8 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   const [generating, setGenerating] = useState(false);
   const [letterTemplate, setLetterTemplate] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const generateLetter = async () => {
     setGenerating(true);
@@ -37,6 +61,14 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleSaveDispute = async () => {
+    setSaving(true);
+    setSaved(false);
+    const result = await saveDisputeLetter(fillTemplate(true));
+    if (result) setSaved(true);
+    setSaving(false);
   };
 
   const exportPDF = async () => {
@@ -165,16 +197,6 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
     window.open(gmailURL, "_blank");
   };
 
-  const getPlaceholders = (text: string) => {
-    const placeholders = [];
-    const regex = /\[(.+?)\]/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      placeholders.push(match[1]);
-    }
-    return placeholders;
-  };
-
   return (
     <>
       <button
@@ -243,6 +265,23 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
                     })}
               </div>
               <div className="flex justify-end mt-6 space-x-3">
+                <button
+                  onClick={handleSaveDispute}
+                  disabled={saving || saved}
+                  className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                    saved
+                      ? "bg-green-700 text-white"
+                      : saving
+                      ? "bg-gray-400 text-white"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>
+                    {saved ? "Saved" : saving ? "Saving..." : "Save Dispute"}
+                  </span>
+                </button>
+
                 <button
                   onClick={() => exportPDF()}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
