@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Search,
   Filter,
@@ -16,8 +16,17 @@ import { PostDetail } from "./PostDetail";
 
 interface CommunityProps {
   t: (key: string) => string;
+  posts: CommunityPost[];
+  onUpvote: (postId: number) => void;
+  refreshPosts: () => void;
 }
-export const Community: React.FC<CommunityProps> = ({ t }) => {
+
+export const Community: React.FC<CommunityProps> = ({
+  t,
+  posts,
+  onUpvote,
+  refreshPosts,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showNewPostModal, setShowNewPostModal] = useState(false);
@@ -30,66 +39,6 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
     { id: "question", label: t("community.questions"), icon: HelpCircle },
     { id: "advice", label: t("community.advice"), icon: Lightbulb },
   ];
-
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchPosts = async () => {
-    const { data: posts, error } = await supabase
-      .from("community_posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error || !posts) return setLoading(false);
-
-    // Fetch reply counts for all posts
-    const replyCounts = await Promise.all(
-      posts.map(async (post) => {
-        const { count, error } = await supabase
-          .from("post_replies")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", post.id);
-
-        return { postId: post.id, count: error ? 0 : count || 0 };
-      })
-    );
-
-    // Merge counts back into posts
-    const postsWithCounts = posts.map((post) => {
-      const match = replyCounts.find((r) => r.postId === post.id);
-      return {
-        ...post,
-        replies: match?.count ?? 0,
-      };
-    });
-
-    setPosts(postsWithCounts as CommunityPost[]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const handleUpvote = async (postId: number) => {
-    console.log("Upvoting post ID:", postId);
-
-    const { data: updatedPost, error } = await supabase.rpc(
-      "increment_upvote_return",
-      { post_id: postId }
-    );
-
-    console.log("RPC result:", { updatedPost, error });
-
-    if (error || !updatedPost) {
-      console.error("Upvote failed", error?.message);
-      return;
-    }
-
-    setPosts((prev) =>
-      prev.map((post) => (post.id === postId ? updatedPost : post))
-    );
-  };
 
   const filteredPosts = posts.filter((post) => {
     const matchesSearch =
@@ -200,8 +149,8 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
             <PostDetail
               post={posts.find((p) => p.id === selectedPost.id)!}
               onBack={() => setSelectedPost(null)}
-              onUpvote={handleUpvote}
-              onReplyPosted={fetchPosts}
+              onUpvote={onUpvote}
+              onReplyPosted={refreshPosts}
             />
           ) : (
             <>
@@ -254,9 +203,8 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleUpvote(post.id);
+                            onUpvote(post.id);
                           }}
-                          className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors"
                         >
                           <ThumbsUp className="h-4 w-4" />
                           <span className="text-sm font-medium">
@@ -298,13 +246,8 @@ export const Community: React.FC<CommunityProps> = ({ t }) => {
       {showNewPostModal && (
         <NewPostModal
           onClose={() => setShowNewPostModal(false)}
-          onPostCreated={async () => {
-            const { data, error } = await supabase
-              .from("community_posts_with_reply_counts")
-              .select("*")
-              .order("created_at", { ascending: false });
-
-            if (!error && data) setPosts(data as CommunityPost[]);
+          onPostCreated={() => {
+            refreshPosts();
           }}
         />
       )}

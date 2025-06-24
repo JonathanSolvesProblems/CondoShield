@@ -8,7 +8,13 @@ import { LegalAssistant } from "./components/LegalAssistant";
 import { Community } from "./components/Community";
 import { DisputeGenerator } from "./components/DisputeGenerator";
 import { useTranslation } from "./hooks/useLanguage";
-import { Language, Assessment, DisputeLetter, AssessmentItem } from "./types";
+import {
+  Language,
+  Assessment,
+  DisputeLetter,
+  AssessmentItem,
+  CommunityPost,
+} from "./types";
 import { supabase } from "./lib/supabaseClient";
 
 export default function Home() {
@@ -23,6 +29,8 @@ export default function Home() {
   const [latestAnalysis, setLatestAnalysis] = useState<AssessmentItem[] | null>(
     null
   );
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLatestAnalysis = async () => {
@@ -102,7 +110,62 @@ export default function Home() {
 
     loadData();
     fetchLatestAnalysis();
+    fetchPosts();
   }, []);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    const { data: postsData, error } = await supabase
+      .from("community_posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error || !postsData) {
+      setLoading(false);
+      return;
+    }
+
+    // Fetch reply counts for all posts
+    const replyCounts = await Promise.all(
+      postsData.map(async (post) => {
+        const { count, error } = await supabase
+          .from("post_replies")
+          .select("*", { count: "exact", head: true })
+          .eq("post_id", post.id);
+
+        return { postId: post.id, count: error ? 0 : count || 0 };
+      })
+    );
+
+    // Merge counts into posts
+    const postsWithCounts = postsData.map((post) => {
+      const match = replyCounts.find((r) => r.postId === post.id);
+      return {
+        ...post,
+        replies: match?.count ?? 0,
+      };
+    });
+
+    setPosts(postsWithCounts as CommunityPost[]);
+    setLoading(false);
+  };
+
+  // Upvote handler to pass down
+  const handleUpvote = async (postId: number) => {
+    const { data: updatedPost, error } = await supabase.rpc(
+      "increment_upvote_return",
+      { post_id: postId }
+    );
+
+    if (error || !updatedPost) {
+      console.error("Upvote failed", error?.message);
+      return;
+    }
+
+    setPosts((prev) =>
+      prev.map((post) => (post.id === postId ? updatedPost : post))
+    );
+  };
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -136,7 +199,14 @@ export default function Home() {
       case "legal":
         return <LegalAssistant t={t} />;
       case "community":
-        return <Community t={t} />;
+        return (
+          <Community
+            t={t}
+            posts={posts}
+            onUpvote={handleUpvote}
+            refreshPosts={fetchPosts}
+          />
+        );
       case "generator":
         return <DisputeGenerator t={t} assessments={assessments} />;
       default:
