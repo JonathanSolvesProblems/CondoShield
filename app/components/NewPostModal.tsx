@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { UserCheck, UserX } from "lucide-react";
+import { logUserActivity } from "../lib/activityLogger";
 
 export const NewPostModal = ({
   onClose,
@@ -14,6 +16,7 @@ export const NewPostModal = ({
     region: "",
     category: "warning",
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -32,12 +35,24 @@ export const NewPostModal = ({
     const { error } = await supabase.from("community_posts").insert({
       ...form,
       user_id: user.id,
-      author: user.user_metadata?.display_name || "Anonymous",
+      author: isAnonymous
+        ? "Anonymous"
+        : user.user_metadata?.display_name || "Anonymous",
       upvotes: 0,
       replies: 0,
     });
 
     if (error) return alert(error.message);
+
+    await logUserActivity({
+      userId: user.id,
+      type: "community",
+      title: form.title,
+      description: `Created a new post ${isAnonymous ? "anonymously" : ""} in ${
+        form.region
+      } under ${form.category}`,
+    });
+
     onPostCreated();
     onClose();
   };
@@ -84,6 +99,27 @@ export const NewPostModal = ({
             <option value="question">Question</option>
             <option value="advice">Advice</option>
           </select>
+
+          {/* Anonymous Toggle */}
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsAnonymous(!isAnonymous)}
+              className={`flex items-center px-3 py-1 rounded-full text-sm transition ${
+                isAnonymous
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {isAnonymous ? (
+                <UserX className="w-4 h-4 mr-1" />
+              ) : (
+                <UserCheck className="w-4 h-4 mr-1" />
+              )}
+              {isAnonymous ? "Posting as Anonymous" : "Posting with Name"}
+            </button>
+          </div>
+
           <div className="flex justify-end space-x-2">
             <button
               type="button"

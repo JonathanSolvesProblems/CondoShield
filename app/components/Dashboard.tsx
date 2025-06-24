@@ -6,6 +6,8 @@ import {
   TrendingUp,
   Calendar,
   FileText,
+  Users,
+  PiggyBank,
 } from "lucide-react";
 import { Assessment, CostSavingSuggestion, DisputeLetter } from "../types";
 import { supabase } from "../lib/supabaseClient";
@@ -90,12 +92,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     let icon = FileText;
     let color = "text-blue-600";
 
-    if (log.type === "dispute") {
-      icon = AlertTriangle;
-      color = "text-orange-600";
-    } else if (log.type === "success") {
-      icon = CheckCircle;
-      color = "text-green-600";
+    console.log("Processing log:", log);
+
+    switch (log.type) {
+      case "dispute":
+        icon = AlertTriangle;
+        color = "text-orange-600";
+        break;
+
+      case "success":
+        icon = CheckCircle;
+        color = "text-green-600";
+        break;
+
+      case "community":
+        icon = Users;
+        color = "text-blue-600";
+        break;
+
+      case "saving":
+        icon = PiggyBank;
+        color = "text-green-600";
+        break;
+
+      default:
+        break;
     }
 
     // Format time like "2 hours ago"

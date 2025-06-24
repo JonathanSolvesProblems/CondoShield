@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FileText, Download, Copy, Sparkles } from "lucide-react";
 import { Assessment, CostSavingSuggestion } from "../types";
 import { supabase } from "../lib/supabaseClient";
+import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
 
 interface CostSavingSuggestionGeneratorProps {
   t: (key: string) => string;
@@ -60,7 +61,7 @@ export const CostSavingSuggestionGenerator: React.FC<
 
         // Insert each suggestion as a separate row in Supabase
         const user = (await supabase.auth.getUser()).data.user;
-        if (user) {
+        if (user && data.suggestions?.length) {
           await supabase
             .from("cost_saving_suggestions")
             .delete()
@@ -76,6 +77,20 @@ export const CostSavingSuggestionGenerator: React.FC<
               estimated_savings: s.estimated_savings,
             });
           }
+
+          const totalSavings = data.suggestions.reduce(
+            (sum: number, s: any) => sum + (s.estimated_savings ?? 0),
+            0
+          );
+
+          await supabase.from("user_activity_logs").insert({
+            user_id: user.id,
+            type: "saving",
+            title: "Cost Savings Generated",
+            description: `Generated ${
+              data.suggestions.length
+            } suggestions totaling $${totalSavings.toLocaleString()}`,
+          });
         }
       } else {
         setSuggestion("No suggestions were generated.");
@@ -151,12 +166,11 @@ export const CostSavingSuggestionGenerator: React.FC<
               <Copy className="h-5 w-5" />
               <span>{t("savings.copy")}</span>
             </button>
-            <button
-              onClick={() => setSuggestion(null)}
-              className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700"
-            >
-              Generate Another
-            </button>
+            {previousSuggestions[selectedId] && (
+              <DisputeLetterGenerator
+                aiText={generateSavingsSummary(previousSuggestions[selectedId])}
+              />
+            )}
           </div>
 
           <div className="bg-white border p-6 rounded-xl shadow-sm">
@@ -172,4 +186,29 @@ export const CostSavingSuggestionGenerator: React.FC<
       )}
     </div>
   );
+};
+
+const generateSavingsSummary = (items: CostSavingSuggestion[]): string => {
+  if (!items || items.length === 0) {
+    return "After reviewing your assessment, no immediate cost-saving opportunities were found.";
+  }
+  const total = items.reduce((sum, s) => sum + (s.estimated_savings || 0), 0);
+  const lines = items.map(
+    (s, i) =>
+      `${i + 1}. ${
+        s.suggestion
+      } (Est. Savings: $${s.estimated_savings?.toLocaleString()})`
+  );
+  return [
+    `Subject: Recommendations for Cost Savings`,
+    ``,
+    `Based on your condo assessment, here are some actionable cost-saving suggestions totaling an estimated $${total.toLocaleString()}:`,
+    ``,
+    ...lines,
+    ``,
+    `We recommend reviewing these items and discussing them with your association board or property manager.`,
+    ``,
+    `Sincerely,`,
+    `[Your Name]`,
+  ].join("\n");
 };
