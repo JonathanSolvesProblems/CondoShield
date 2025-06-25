@@ -8,6 +8,8 @@ import {
   CheckCircle,
   HelpCircle,
   Lightbulb,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { CommunityPost } from "../types";
 import { supabase } from "../lib/supabaseClient";
@@ -29,8 +31,10 @@ export const Community: React.FC<CommunityProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedSort, setSelectedSort] = useState<string>("");
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  const [showSortOptions, setShowSortOptions] = useState(false);
 
   const categories = [
     { id: "all", label: t("community.all"), icon: MessageSquare },
@@ -49,6 +53,16 @@ export const Community: React.FC<CommunityProps> = ({
       selectedCategory === "all" || post.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (selectedSort === "most-upvotes") {
+    filteredPosts.sort((a, b) => b.upvotes - a.upvotes);
+  } else if (selectedSort === "least-upvotes") {
+    filteredPosts.sort((a, b) => a.upvotes - b.upvotes);
+  } else if (selectedSort === "most-replies") {
+    filteredPosts.sort((a, b) => b.replies - a.replies);
+  } else if (selectedSort === "least-replies") {
+    filteredPosts.sort((a, b) => a.replies - b.replies);
+  }
 
   const getCategoryIcon = (category: string) => {
     const categoryMap = {
@@ -115,7 +129,12 @@ export const Community: React.FC<CommunityProps> = ({
 
           {/* Category Filter */}
           <div className="flex items-center space-x-2 overflow-x-auto pb-2">
-            <Filter className="h-5 w-5 text-gray-500 flex-shrink-0" />
+            <button
+              onClick={() => setShowSortOptions((prev) => !prev)}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-600"
+            >
+              <Filter className="h-5 w-5 text-gray-500 flex-shrink-0" />
+            </button>
             <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
               {t("community.filter")}:
             </span>
@@ -139,6 +158,50 @@ export const Community: React.FC<CommunityProps> = ({
               })}
             </div>
           </div>
+          {showSortOptions && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button
+                onClick={() => setSelectedSort("most-upvotes")}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  selectedSort === "most-upvotes"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <ThumbsUp className="h-4 w-4" /> <span>Most Upvotes</span>
+              </button>
+              <button
+                onClick={() => setSelectedSort("least-upvotes")}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  selectedSort === "least-upvotes"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <ThumbsUp className="h-4 w-4" /> <span>Least Upvotes</span>
+              </button>
+              <button
+                onClick={() => setSelectedSort("most-replies")}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  selectedSort === "most-replies"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <MessageSquare className="h-4 w-4" /> <span>Most Replies</span>
+              </button>
+              <button
+                onClick={() => setSelectedSort("least-replies")}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  selectedSort === "least-replies"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <MessageSquare className="h-4 w-4" /> <span>Least Replies</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

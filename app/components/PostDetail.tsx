@@ -18,6 +18,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
 }) => {
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState<any[]>([]);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     const fetchReplies = async () => {
@@ -37,10 +38,14 @@ export const PostDetail: React.FC<PostDetailProps> = ({
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return alert("You must be logged in to reply.");
 
+    const authorName = isAnonymous
+      ? "Anonymous"
+      : user.user_metadata.display_name || user.email;
+
     const { error } = await supabase.from("post_replies").insert({
       post_id: post.id,
       user_id: user.id,
-      author: user.user_metadata.display_name || user.email,
+      author: authorName,
       content: reply,
     });
 
@@ -54,7 +59,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
 
     setReplies([
       {
-        author: user.user_metadata.display_name || user.email,
+        author: authorName,
         content: reply,
         created_at: new Date().toISOString(),
       },
@@ -62,6 +67,15 @@ export const PostDetail: React.FC<PostDetailProps> = ({
     ]);
     setReply("");
     onReplyPosted();
+
+    await supabase.from("user_activity_logs").insert({
+      user_id: user.id,
+      type: "community",
+      title: `Replied to post: ${post.title}`,
+      description: `Posted a reply${isAnonymous ? " anonymously" : ""} in ${
+        post.region
+      } under ${post.category}`,
+    });
   };
 
   return (
@@ -104,6 +118,21 @@ export const PostDetail: React.FC<PostDetailProps> = ({
           rows={3}
           placeholder="Write a reply..."
         />
+
+        {/* Anonymous Toggle */}
+        <div className="flex items-center space-x-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setIsAnonymous(!isAnonymous)}
+            className={`flex items-center px-3 py-1 rounded-full text-sm transition ${
+              isAnonymous
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {isAnonymous ? "Replying Anonymously" : "Reply Anonymously"}
+          </button>
+        </div>
         <button
           onClick={handleReplySubmit}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

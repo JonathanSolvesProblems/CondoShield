@@ -1,11 +1,14 @@
 // components/RegionSelectorModal.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { X } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 interface RegionSelectorModalProps {
   onClose: () => void;
   onSelect: (region: string) => void;
+  onRegionUpdated?: () => void;
+  initialRegion?: string;
 }
 
 const countries = {
@@ -18,17 +21,55 @@ const countries = {
 export const RegionSelectorModal: React.FC<RegionSelectorModalProps> = ({
   onClose,
   onSelect,
+  onRegionUpdated,
+  initialRegion,
 }) => {
   const [continent, setContinent] = useState<string>("North America");
   const [country, setCountry] = useState<string | null>("Canada");
   const [provinceOrState, setProvinceOrState] = useState("");
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    if (!initialRegion) return;
+
+    const match = initialRegion.match(/^(.+?)\s\(([^/()]+)(?:\/([^()]+))?\)$/);
+    const parsedContinent = match?.[1] ?? "North America";
+    const parsedCountry = match?.[2] ?? "Canada";
+    const parsedProvince = match?.[3] ?? "";
+
+    setContinent(parsedContinent);
+    setCountry(parsedCountry);
+    setProvinceOrState(parsedProvince);
+  }, [initialRegion]);
+
+  const handleSubmit = async () => {
     let fullRegion = continent;
     if (country) fullRegion += ` (${country}`;
     if (provinceOrState) fullRegion += `/${provinceOrState}`;
     if (country) fullRegion += ")";
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (!authError && user) {
+      const { error: dbError } = await supabase.from("user_locations").upsert(
+        {
+          user_id: user.id,
+          continent,
+          country,
+          region: provinceOrState || null,
+        },
+        { onConflict: "user_id" } // This ensures overwrite if user_id already exists
+      );
+
+      if (dbError) {
+        console.error("Failed to save region:", dbError.message);
+      }
+    }
+
     onSelect(fullRegion);
+    onRegionUpdated?.();
     onClose();
   };
 

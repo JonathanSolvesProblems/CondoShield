@@ -8,11 +8,13 @@ import {
   FileText,
   Users,
   PiggyBank,
+  Gavel,
 } from "lucide-react";
 import { Assessment, CostSavingSuggestion, DisputeLetter } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { DisputesModal } from "./DisputesModal";
 import { AssessmentsModal } from "./AssessmentsModal";
+import { ActivityModal } from "./ActivityModal";
 
 interface DashboardProps {
   t: (key: string) => string;
@@ -48,6 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isAssessmentsOpen, setIsAssessmentsOpen] = useState(false);
   const [selectedAssessment, setSelectedAssessment] =
     useState<Assessment | null>(null);
+  const [showActivityModal, setShowActivityModal] = useState(false);
 
   const totalAmount = assessments.reduce((total, assessment) => {
     if (!assessment.breakdown || assessment.breakdown.length === 0)
@@ -92,8 +95,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     let icon = FileText;
     let color = "text-blue-600";
 
-    console.log("Processing log:", log);
-
     switch (log.type) {
       case "dispute":
         icon = AlertTriangle;
@@ -113,6 +114,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       case "saving":
         icon = PiggyBank;
         color = "text-green-600";
+        break;
+
+      case "legal":
+        icon = Gavel;
+        color = "text-purple-600";
         break;
 
       default:
@@ -263,7 +269,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <h3 className="text-lg font-semibold text-gray-900">
                 {t("dashboard.recentActivity")}
               </h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <button
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                onClick={() => setShowActivityModal(true)}
+              >
                 {t("dashboard.viewAll")}
               </button>
             </div>
@@ -377,6 +386,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             setIsAssessmentsOpen(false);
           }}
         />
+      )}
+
+      {showActivityModal && (
+        <ActivityModal onClose={() => setShowActivityModal(false)} />
       )}
     </div>
   );

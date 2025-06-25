@@ -85,7 +85,26 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right: Language + Login/Logout */}
           <div className="flex items-center space-x-4 flex-shrink-0">
             <button
-              onClick={() => onLanguageChange(language === "en" ? "fr" : "en")}
+              onClick={async () => {
+                const newLang = language === "en" ? "fr" : "en";
+                onLanguageChange(newLang);
+
+                const {
+                  data: { user },
+                  error,
+                } = await supabase.auth.getUser();
+                if (!error && user) {
+                  const { error: dbError } = await supabase
+                    .from("user_locations")
+                    .upsert(
+                      { user_id: user.id, language: newLang },
+                      { onConflict: "user_id" }
+                    );
+                  if (dbError) {
+                    console.error("Failed to save language:", dbError.message);
+                  }
+                }
+              }}
               className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md transition-colors"
             >
               <Globe className="h-4 w-4" />

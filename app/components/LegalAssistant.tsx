@@ -8,18 +8,25 @@ import {
 } from "lucide-react";
 import { RegionSelectorModal } from "./RegionSelectorModal";
 import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
+import { logUserActivity } from "../lib/activityLogger";
+import { supabase } from "../lib/supabaseClient";
 
 interface LegalAssistantProps {
   t: (key: string) => string;
+  initialRegion: string;
+  onRegionUpdated?: () => void;
 }
 
-export const LegalAssistant: React.FC<LegalAssistantProps> = ({ t }) => {
+export const LegalAssistant: React.FC<LegalAssistantProps> = ({
+  t,
+  initialRegion,
+  onRegionUpdated,
+}) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState(
-    "North America (Canada/USA)"
-  );
+  const [selectedRegion, setSelectedRegion] = useState(initialRegion);
+
   const [showRegionModal, setShowRegionModal] = useState(false);
 
   const commonQuestions = [
@@ -65,6 +72,17 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({ t }) => {
 
       const data = await response.json();
       setAnswer(data.answer || "Sorry, no response received.");
+
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (user && data.answer) {
+        await logUserActivity({
+          userId: user.id,
+          type: "legal",
+          title: question,
+          description: `Asked a legal question for region: ${selectedRegion}`,
+        });
+      }
     } catch (err) {
       console.error(err);
       setAnswer("There was an error processing your question.");
@@ -108,6 +126,8 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({ t }) => {
         <RegionSelectorModal
           onClose={() => setShowRegionModal(false)}
           onSelect={(region) => setSelectedRegion(region)}
+          onRegionUpdated={onRegionUpdated}
+          initialRegion={initialRegion}
         />
       )}
 

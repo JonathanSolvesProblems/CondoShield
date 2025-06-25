@@ -37,6 +37,9 @@ export default function Home() {
   >({});
   const [selectedSavingAssessmentId, setSelectedSavingAssessmentId] =
     useState<string>("");
+  const [userRegion, setUserRegion] = useState<string>(
+    "North America (Canada/USA)"
+  );
 
   useEffect(() => {
     const fetchLatestAnalysis = async () => {
@@ -114,10 +117,42 @@ export default function Home() {
       }
     };
 
+    fetchUserRegion();
     loadData();
     fetchLatestAnalysis();
     fetchPosts();
   }, []);
+
+  const fetchUserRegion = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("user_locations")
+      .select("continent, country, region, language")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to load region/language info:", error.message);
+      return;
+    }
+
+    if (data) {
+      const region = `${data.continent}${
+        data.country
+          ? ` (${data.country}${data.region ? `/${data.region}` : ""})`
+          : ""
+      }`;
+      setUserRegion(region);
+
+      if (data.language === "en" || data.language === "fr") {
+        setLanguage(data.language);
+      }
+    } else {
+      setUserRegion("North America (Canada/USA)");
+    }
+  };
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -202,6 +237,16 @@ export default function Home() {
     setPosts((prev) =>
       prev.map((post) => (post.id === postId ? updatedPost : post))
     );
+
+    const user = (await supabase.auth.getUser()).data.user;
+    if (user) {
+      await supabase.from("user_activity_logs").insert({
+        user_id: user.id,
+        type: "community",
+        title: `Upvoted post: ${updatedPost.title}`,
+        description: `Gave an upvote to a post in ${updatedPost.region} under ${updatedPost.category}`,
+      });
+    }
   };
 
   const totalSavings = Object.values(suggestionsMap)
@@ -244,7 +289,13 @@ export default function Home() {
           />
         );
       case "legal":
-        return <LegalAssistant t={t} />;
+        return (
+          <LegalAssistant
+            t={t}
+            initialRegion={userRegion}
+            onRegionUpdated={fetchUserRegion}
+          />
+        );
       case "community":
         return (
           <Community
@@ -291,6 +342,7 @@ export default function Home() {
         currentPage={currentPage}
         onPageChange={(page) => {
           setCurrentPage(page);
+          // if (page === "legal") fetchUserRegion(); // force refetch
           if (page !== "analyzer") setSelectedAssessment(null); // clear if navigating away
         }}
         language={language}
