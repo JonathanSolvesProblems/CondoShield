@@ -9,6 +9,7 @@ import {
   Users,
   PiggyBank,
   Gavel,
+  X,
 } from "lucide-react";
 import { Assessment, CostSavingSuggestion, DisputeLetter } from "../types";
 import { supabase } from "../lib/supabaseClient";
@@ -18,6 +19,7 @@ import { ActivityModal } from "./ActivityModal";
 import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { RemindersModal } from "./RemindersModal";
 
 interface DashboardProps {
   t: (key: string) => string;
@@ -63,6 +65,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     description: "",
     due_date: "",
   });
+  const [showRemindersModal, setShowRemindersModal] = useState(false);
 
   const totalAmount = assessments.reduce((total, assessment) => {
     if (!assessment.breakdown || assessment.breakdown.length === 0)
@@ -205,6 +208,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setAssessments(updatedAssessments);
   };
 
+  function formatForDateTimeLocal(isoString: string) {
+    const date = new Date(isoString);
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -341,10 +351,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Upcoming Deadlines */}
         {/* Upcoming Deadlines + Custom Reminders */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Upcoming Deadlines
             </h3>
+            <button
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              onClick={() => setShowRemindersModal(true)}
+            >
+              View All
+            </button>
           </div>
 
           <div className="p-6 space-y-4">
@@ -377,6 +393,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </p>
                     <p className="text-xs text-gray-500">Due date</p>
                   </div>
+                  <button
+                    onClick={async () => {
+                      await supabase
+                        .from("user_reminders")
+                        .delete()
+                        .eq("id", item.id);
+                      setReminders((prev) =>
+                        prev.filter((r) => r.id !== item.id)
+                      );
+                    }}
+                    className="text-red-600 hover:text-red-800 ml-4"
+                    title="Delete Reminder"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ))
             )}
@@ -385,7 +416,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Add Reminder Form */}
           <div className="p-6 border-t border-gray-200 mt-4">
             <h4 className="text-md font-semibold text-gray-900 mb-4">
-              Add Custom Reminder
+              Add Deadline
             </h4>
 
             <div className="space-y-4">
@@ -400,9 +431,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   }))
                 }
                 showTimeSelect
-                dateFormat="Pp"
+                timeIntervals={15}
+                timeFormat="HH:mm"
+                dateFormat="MMMM d, yyyy h:mm aa"
                 placeholderText="Select date and time"
-                className="w-full p-2 border rounded"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
 
               <textarea
@@ -416,19 +449,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   }))
                 }
               />
-              <input
-                type="datetime-local"
-                className="w-full p-2 border rounded"
-                value={newReminder.due_date}
-                onChange={(e) =>
-                  setNewReminder((prev) => ({
-                    ...prev,
-                    due_date: e.target.value,
-                  }))
-                }
-              />
               <button
                 onClick={async () => {
+                  if (
+                    !newReminder.due_date ||
+                    !newReminder.description.trim()
+                  ) {
+                    alert("Please fill in both the date and description.");
+                    return;
+                  }
+
                   const user = (await supabase.auth.getUser()).data.user;
                   if (!user) return;
 
@@ -512,6 +542,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {showActivityModal && (
         <ActivityModal onClose={() => setShowActivityModal(false)} />
+      )}
+      {showRemindersModal && (
+        <RemindersModal onClose={() => setShowRemindersModal(false)} />
       )}
     </div>
   );
