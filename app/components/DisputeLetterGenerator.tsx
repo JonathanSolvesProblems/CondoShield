@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { FileText, X, Download, Mail } from "lucide-react";
 import { saveAs } from "file-saver";
@@ -7,8 +7,10 @@ import html2canvas from "html2canvas";
 import { supabase } from "../lib/supabaseClient";
 
 interface DisputeLetterGeneratorProps {
-  aiText: string;
+  aiText?: string;
   triggerText?: string;
+  preloadedLetter?: string;
+  openExternally?: boolean;
 }
 
 const saveDisputeLetter = async (content: string, title?: string) => {
@@ -35,6 +37,8 @@ const saveDisputeLetter = async (content: string, title?: string) => {
 export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   aiText,
   triggerText = "Generate Dispute Letter",
+  preloadedLetter,
+  openExternally,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -42,6 +46,14 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   const [fields, setFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (preloadedLetter) {
+      setLetterTemplate(preloadedLetter);
+      setFields(extractFields(preloadedLetter));
+      if (openExternally) setIsOpen(true);
+    }
+  }, [preloadedLetter]);
 
   const generateLetter = async () => {
     setGenerating(true);
@@ -219,7 +231,7 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
             <Dialog.Panel className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl z-50 relative">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Editable Dispute Letter
+                  {openExternally ? "Saved" : "Editable"} Dispute Letter
                 </h2>
                 <button onClick={() => setIsOpen(false)}>
                   <X className="h-5 w-5 text-gray-600" />
@@ -230,57 +242,64 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
                 className="prose max-w-none text-gray-800 space-y-4 leading-relaxed px-4"
               >
                 {letterTemplate &&
-                  fillTemplate()
-                    .split("\n")
-                    .map((line, lineIdx) => {
-                      const parts = line.split(/(\[[^\]]+\])/g);
-                      return (
-                        <p key={lineIdx}>
-                          {parts.map((part, partIdx) => {
-                            if (part.startsWith("[") && part.endsWith("]")) {
-                              const keyName = part.slice(1, -1);
-                              return (
-                                <input
-                                  key={`${lineIdx}-${partIdx}-${keyName}`}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") e.preventDefault();
-                                  }}
-                                  type="text"
-                                  placeholder={part}
-                                  value={fields[keyName] || ""}
-                                  onChange={(e) =>
-                                    setFields((f) => ({
-                                      ...f,
-                                      [keyName]: e.target.value,
-                                    }))
-                                  }
-                                  className="border-b border-gray-400 mx-1 px-1 min-w-[80px] max-w-[250px] text-sm inline-block"
-                                />
-                              );
-                            }
-                            return part;
-                          })}
-                        </p>
-                      );
-                    })}
+                  letterTemplate.split("\n").map((line, lineIdx) => {
+                    const parts = line.split(/({{.*?}})/g);
+                    return (
+                      <p key={lineIdx}>
+                        {parts.map((part, partIdx) => {
+                          const match = part.match(/{{(.*?)}}/);
+                          if (match) {
+                            const keyName = match[1].trim();
+                            return (
+                              <input
+                                key={`${lineIdx}-${partIdx}-${keyName}`}
+                                type="text"
+                                placeholder={keyName}
+                                value={fields[keyName] || ""}
+                                onChange={(e) =>
+                                  setFields((f) => ({
+                                    ...f,
+                                    [keyName]: e.target.value,
+                                  }))
+                                }
+                                className="border-b border-gray-400 mx-1 px-1 min-w-[80px] max-w-[250px] text-sm inline-block"
+                              />
+                            );
+                          }
+                          return part;
+                        })}
+                      </p>
+                    );
+                  })}
               </div>
+
               <div className="flex justify-end mt-6 space-x-3">
-                <button
-                  onClick={handleSaveDispute}
-                  disabled={saving || saved}
-                  className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                    saved
-                      ? "bg-green-700 text-white"
-                      : saving
-                      ? "bg-gray-400 text-white"
-                      : "bg-green-600 text-white hover:bg-green-700"
-                  }`}
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>
-                    {saved ? "Saved" : saving ? "Saving..." : "Save Dispute"}
-                  </span>
-                </button>
+                {!openExternally && (
+                  <>
+                    <button
+                      onClick={handleSaveDispute}
+                      disabled={saving || saved}
+                      className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+                        saved
+                          ? "bg-green-700 text-white"
+                          : saving
+                          ? "bg-gray-400 text-white"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>
+                        <button>
+                          {saved
+                            ? "Saved"
+                            : saving
+                            ? "Saving..."
+                            : "Save Dispute"}
+                        </button>
+                      </span>
+                    </button>
+                  </>
+                )}
 
                 <button
                   onClick={() => exportPDF()}

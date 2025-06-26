@@ -17,7 +17,6 @@ export const CostSavingSuggestionGenerator: React.FC<
   const [selectedId, setSelectedId] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     if (initialSelectedId) {
       setSelectedId(initialSelectedId);
@@ -166,11 +165,9 @@ export const CostSavingSuggestionGenerator: React.FC<
               <Copy className="h-5 w-5" />
               <span>{t("savings.copy")}</span>
             </button>
-            {previousSuggestions[selectedId] && (
-              <DisputeLetterGenerator
-                aiText={generateSavingsSummary(previousSuggestions[selectedId])}
-              />
-            )}
+            <DisputeLetterGenerator
+              aiText={generateSavingsSummary(previousSuggestions[selectedId])}
+            />
           </div>
 
           <div className="bg-white border p-6 rounded-xl shadow-sm">

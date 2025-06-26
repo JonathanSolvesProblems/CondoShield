@@ -40,83 +40,124 @@ export default function Home() {
   const [userRegion, setUserRegion] = useState<string>(
     "North America (Canada/USA)"
   );
+  const [reminders, setReminders] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchLatestAnalysis = async () => {
-      if (selectedAssessment) return; // If user selected an assessment, skip fetching latest
-
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("assessment_analyses")
-        .select("results")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Failed to load latest analysis:", error.message);
-        return;
-      }
-
-      if (data?.results) {
-        setLatestAnalysis(data.results);
-      }
-    };
-
-    const loadData = async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-
-      // Fetch assessments
-      const { data: assessmentsData, error: assessmentsError } = await supabase
-        .from("assessment_analyses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
-      if (!assessmentsError && assessmentsData) {
-        // Your existing mapping logic
-        const mapped = assessmentsData.map((d) => {
-          const breakdown = d.results ?? [];
-          const amount = breakdown.reduce(
-            (sum: number, item: any) => sum + (item.amount || 0),
-            0
-          );
-          return {
-            ...d,
-            breakdown,
-            amount,
-            dateReceived: d.updated_at,
-          } as Assessment;
-        });
-        setAssessments(mapped);
-      }
-
-      // Fetch disputes
-      const { data: disputesData } = await supabase
-        .from("dispute_letters")
-        .select("*")
-        .eq("status", "active")
-        .eq("user_id", user.id);
-      setDisputes(disputesData ?? []);
-
-      // Fetch user activity logs
-      const { data: activityData, error: activityError } = await supabase
-        .from("user_activity_logs")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("timestamp", { ascending: false })
-        .limit(10); // limit for performance, adjust as needed
-
-      if (activityError) {
-        console.error("Failed to fetch user activity logs:", activityError);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // ✅ User just logged in — fetch fresh data
+        loadData();
+        fetchLatestAnalysis();
+        fetchSuggestions();
+        fetchUserRegion();
+        fetchPosts();
       } else {
-        setUserActivityLogs(activityData ?? []);
+        // 🚪 User logged out — clear state if needed
+        setAssessments([]);
+        setDisputes([]);
+        setLatestAnalysis(null);
+        setSuggestionsMap({});
+        setUserActivityLogs([]);
+        setCurrentPage("dashboard");
+        setSelectedAssessment(null);
       }
-    };
+    });
 
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const loadData = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    // Fetch assessments
+    const { data: assessmentsData, error: assessmentsError } = await supabase
+      .from("assessment_analyses")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    if (!assessmentsError && assessmentsData) {
+      // Your existing mapping logic
+      const mapped = assessmentsData.map((d) => {
+        const breakdown = d.results ?? [];
+        const amount = breakdown.reduce(
+          (sum: number, item: any) => sum + (item.amount || 0),
+          0
+        );
+        return {
+          ...d,
+          breakdown,
+          amount,
+          dateReceived: d.updated_at,
+        } as Assessment;
+      });
+      setAssessments(mapped);
+
+      const { data: remindersData, error: remindersError } = await supabase
+        .from("user_reminders")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("due_date", { ascending: true });
+
+      if (remindersError) {
+        console.error("Failed to fetch reminders:", remindersError);
+      } else {
+        setReminders(remindersData ?? []);
+      }
+    }
+
+    // Fetch disputes
+    const { data: disputesData } = await supabase
+      .from("dispute_letters")
+      .select("*")
+      .eq("status", "active")
+      .eq("user_id", user.id);
+    setDisputes(disputesData ?? []);
+
+    // Fetch user activity logs
+    const { data: activityData, error: activityError } = await supabase
+      .from("user_activity_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("timestamp", { ascending: false })
+      .limit(10); // limit for performance, adjust as needed
+
+    if (activityError) {
+      console.error("Failed to fetch user activity logs:", activityError);
+    } else {
+      setUserActivityLogs(activityData ?? []);
+    }
+  };
+
+  const fetchLatestAnalysis = async () => {
+    if (selectedAssessment) return; // If user selected an assessment, skip fetching latest
+
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("assessment_analyses")
+      .select("results")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Failed to load latest analysis:", error.message);
+      return;
+    }
+
+    if (data?.results) {
+      setLatestAnalysis(data.results);
+    }
+  };
+
+  useEffect(() => {
     fetchUserRegion();
     loadData();
     fetchLatestAnalysis();
@@ -154,34 +195,34 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if (!user) return;
+  const fetchSuggestions = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) return;
 
-      const { data: suggestions, error } = await supabase
-        .from("cost_saving_suggestions")
-        .select("*")
-        .eq("user_id", user.id);
+    const { data: suggestions, error } = await supabase
+      .from("cost_saving_suggestions")
+      .select("*")
+      .eq("user_id", user.id);
 
-      if (error) {
-        console.error("Failed to fetch cost saving suggestions:", error);
-        return;
+    if (error) {
+      console.error("Failed to fetch cost saving suggestions:", error);
+      return;
+    }
+
+    // Group suggestions by assessment_id
+    const map: Record<string, CostSavingSuggestion[]> = {};
+    suggestions?.forEach((s) => {
+      if (!map[s.assessment_id]) {
+        map[s.assessment_id] = [];
       }
+      map[s.assessment_id].push(s);
+    });
 
-      // Group suggestions by assessment_id
-      const map: Record<string, CostSavingSuggestion[]> = {};
-      suggestions?.forEach((s) => {
-        if (!map[s.assessment_id]) {
-          map[s.assessment_id] = [];
-        }
-        map[s.assessment_id].push(s);
-      });
+    setSuggestionsMap(map);
+  };
 
-      setSuggestionsMap(map);
-    };
-
+  useEffect(() => {
     fetchSuggestions();
   }, []);
 
@@ -274,6 +315,8 @@ export default function Home() {
               setSelectedSavingAssessmentId(assessment.id);
               setCurrentPage("costsaving");
             }}
+            reminders={reminders}
+            setReminders={setReminders}
           />
         );
       case "analyzer":
@@ -332,6 +375,8 @@ export default function Home() {
             setSelectedSavingAssessmentId(assessment.id);
             setCurrentPage("costsaving");
           }}
+          reminders={reminders}
+          setReminders={setReminders}
         />;
     }
   };

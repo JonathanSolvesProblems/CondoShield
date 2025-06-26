@@ -67,7 +67,8 @@ export const AssessmentsModal: React.FC<Props> = ({
                   </p>
                   {a.dateReceived && (
                     <p className="text-xs text-gray-400">
-                      Last updated: {a.dateReceived}
+                      Last updated:{" "}
+                      {new Date(a.dateReceived).toLocaleDateString()}
                     </p>
                   )}
                   {hasSuggestions && (

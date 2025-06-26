@@ -27,6 +27,7 @@ export interface LegalQuestion {
 }
 
 export interface DisputeLetter {
+  created_at: string | number | Date;
   id: string;
   assessmentId: string;
   content: string;

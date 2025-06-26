@@ -15,6 +15,9 @@ import { supabase } from "../lib/supabaseClient";
 import { DisputesModal } from "./DisputesModal";
 import { AssessmentsModal } from "./AssessmentsModal";
 import { ActivityModal } from "./ActivityModal";
+import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface DashboardProps {
   t: (key: string) => string;
@@ -27,6 +30,8 @@ interface DashboardProps {
   savedAmount: number;
   suggestionsMap: Record<string, CostSavingSuggestion[]>;
   onViewSavings: (assessment: Assessment) => void;
+  reminders: any[];
+  setReminders: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -40,6 +45,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   savedAmount,
   suggestionsMap,
   onViewSavings,
+  reminders,
+  setReminders,
 }) => {
   const totalAssessments = assessments.length;
   const activeDisputes = disputes.length;
@@ -51,6 +58,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedAssessment, setSelectedAssessment] =
     useState<Assessment | null>(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
+  const [newReminder, setNewReminder] = useState({
+    title: "",
+    description: "",
+    due_date: "",
+  });
 
   const totalAmount = assessments.reduce((total, assessment) => {
     if (!assessment.breakdown || assessment.breakdown.length === 0)
@@ -71,7 +83,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const { error } = await supabase
       .from("dispute_letters")
       .update({ status: "resolved" })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Error marking dispute resolved:", error);
@@ -147,12 +160,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   });
 
-  const upcomingDeadlines = assessments
-    .filter((a) => a.status === "pending")
+  const upcomingDeadlines = [
+    ...assessments
+      .filter((a) => a.status === "pending" && a.dueDate)
+      .map((a) => ({
+        id: a.id,
+        title: a.title,
+        description: "",
+        dueDate: a.dueDate,
+        isCustom: false,
+        amount: a.amount,
+      })),
+    ...reminders.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      dueDate: r.due_date,
+      isCustom: true,
+      amount: null,
+    })),
+  ]
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     )
-    .slice(0, 3);
+    .slice(0, 5);
 
   const handleDeleteAssessment = async (id: string) => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -308,45 +339,124 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Upcoming Deadlines */}
+        {/* Upcoming Deadlines + Custom Reminders */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
               Upcoming Deadlines
             </h3>
           </div>
-          <div className="p-6">
+
+          <div className="p-6 space-y-4">
             {upcomingDeadlines.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 No upcoming deadlines
               </p>
             ) : (
-              <div className="space-y-4">
-                {upcomingDeadlines.map((assessment) => (
-                  <div
-                    key={assessment.id}
-                    className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
-                  >
-                    <div className="bg-blue-100 p-2 rounded-lg">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">
-                        {assessment.title}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        ${assessment.amount.toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        {new Date(assessment.dueDate).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-gray-500">Due date</p>
-                    </div>
+              upcomingDeadlines.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
+                >
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Calendar className="h-4 w-4 text-blue-600" />
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {item.title}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {item.isCustom
+                        ? item.description
+                        : `$${item.amount?.toLocaleString() ?? "N/A"}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(item.dueDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-gray-500">Due date</p>
+                  </div>
+                </div>
+              ))
             )}
+          </div>
+
+          {/* Add Reminder Form */}
+          <div className="p-6 border-t border-gray-200 mt-4">
+            <h4 className="text-md font-semibold text-gray-900 mb-4">
+              Add Custom Reminder
+            </h4>
+
+            <div className="space-y-4">
+              <DatePicker
+                selected={
+                  newReminder.due_date ? new Date(newReminder.due_date) : null
+                }
+                onChange={(date) =>
+                  setNewReminder((prev) => ({
+                    ...prev,
+                    due_date: date?.toISOString() || "",
+                  }))
+                }
+                showTimeSelect
+                dateFormat="Pp"
+                placeholderText="Select date and time"
+                className="w-full p-2 border rounded"
+              />
+
+              <textarea
+                className="w-full p-2 border rounded"
+                placeholder="Description"
+                value={newReminder.description}
+                onChange={(e) =>
+                  setNewReminder((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+              />
+              <input
+                type="datetime-local"
+                className="w-full p-2 border rounded"
+                value={newReminder.due_date}
+                onChange={(e) =>
+                  setNewReminder((prev) => ({
+                    ...prev,
+                    due_date: e.target.value,
+                  }))
+                }
+              />
+              <button
+                onClick={async () => {
+                  const user = (await supabase.auth.getUser()).data.user;
+                  if (!user) return;
+
+                  const { data, error } = await supabase
+                    .from("user_reminders")
+                    .insert({
+                      user_id: user.id,
+                      title: newReminder.title,
+                      description: newReminder.description,
+                      due_date: new Date(newReminder.due_date).toISOString(),
+                      type: "system",
+                    })
+                    .select()
+                    .single();
+
+                  if (error) {
+                    console.error("Failed to add reminder", error);
+                    return;
+                  }
+
+                  setReminders((prev) => [...prev, data]);
+                  setNewReminder({ title: "", description: "", due_date: "" });
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                Add Reminder
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -369,8 +479,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
               .eq("user_id", user.id);
             setDisputes(data ?? []);
           }}
+          onSelectDispute={(dispute) => {
+            setSelectedDispute(dispute); // set the selected dispute for editing
+            setIsDisputesOpen(false); // optionally close the modal
+          }}
         />
       )}
+
+      {selectedDispute && (
+        <DisputeLetterGenerator
+          preloadedLetter={selectedDispute.content}
+          openExternally={true}
+        />
+      )}
+
       {isAssessmentsOpen && (
         <AssessmentsModal
           assessments={assessments}

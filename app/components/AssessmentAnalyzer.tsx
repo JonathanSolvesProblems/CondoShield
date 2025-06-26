@@ -194,14 +194,14 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
       {!results && (
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            <div className="flex justify-center space-x-4 mb-6">
+            {/* <div className="flex justify-center space-x-4 mb-6">
               <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
                 {t("analyzer.upload")}
               </button>
               <button className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
                 {t("analyzer.manual")}
               </button>
-            </div>
+            </div> */}
 
             {error && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
