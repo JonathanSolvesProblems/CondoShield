@@ -37,7 +37,6 @@ export const Header: React.FC<HeaderProps> = ({
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      console.log("Fetched session:", session);
       setUser(session?.user ?? null);
     };
 
@@ -124,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             {user ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
-                  {user.user_metadata?.full_name ||
+                  {user.user_metadata?.display_name ||
                     user.user_metadata?.name ||
                     user.user_metadata?.email ||
                     "Anonymous"}

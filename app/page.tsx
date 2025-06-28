@@ -40,6 +40,7 @@ export default function Home() {
   const [userRegion, setUserRegion] = useState<string>(
     t("regions.northAmerica")
   );
+  const [legalSessionLoaded, setLegalSessionLoaded] = useState(false);
 
   const [reminders, setReminders] = useState<any[]>([]);
   const [legalQuestion, setLegalQuestion] = useState<string>("");
@@ -157,7 +158,10 @@ export default function Home() {
 
   const fetchLatestLegalSession = async () => {
     const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return;
+    if (!user) {
+      setLegalSessionLoaded(true);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("legal_assistant_sessions")
@@ -176,13 +180,15 @@ export default function Home() {
       setLegalQuestion(data.question);
       setLegalAnswer(data.answer);
     }
+
+    setLegalSessionLoaded(true);
   };
 
   useEffect(() => {
-    if (currentPage === "legal") {
+    if (currentPage === "legal" && !legalSessionLoaded) {
       fetchLatestLegalSession();
     }
-  }, [currentPage]);
+  }, [currentPage, legalSessionLoaded]);
 
   const fetchLatestAnalysis = async () => {
     if (selectedAssessment) return; // If user selected an assessment, skip fetching latest
@@ -385,7 +391,7 @@ export default function Home() {
           />
         );
       case "legal":
-        if (!legalAnswer && !legalQuestion && user) {
+        if (!legalSessionLoaded) {
           fetchLatestLegalSession();
           return (
             <div className="flex justify-center items-center h-64 text-blue-600 text-lg font-medium space-x-2">
