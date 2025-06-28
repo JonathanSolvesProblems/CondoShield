@@ -37,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      console.log("Fetched session:", session);
       setUser(session?.user ?? null);
     };
 
