@@ -12,11 +12,12 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-async function callSuggestionModel(client: any, model: string, items: any[]) {
+async function callSuggestionModel(client: any, model: string, items: any[], languageNote: string) {
   const prompt = `You're a condo cost consultant. Review these charges and suggest actionable cost-saving ideas for the owner. Return a JSON array where each item has:
 - "suggestion" (string) describing the cost-saving idea,
 - "category" (string) categorizing the suggestion,
 - "estimated_savings" (number) estimating potential savings in dollars.
+- ${languageNote}
 
 Example:
 [
@@ -34,7 +35,7 @@ Here is the data to analyze:\n\n${JSON.stringify(items, null, 2)}`;
     body: {
       model,
       messages: [
-        { role: 'system', content: 'You provide precise, practical cost-saving suggestions in JSON format.' },
+        { role: 'system', content: `You provide precise, practical cost-saving suggestions in JSON format. ${languageNote}` },
         { role: 'user', content: prompt },
       ],
     },
@@ -97,7 +98,9 @@ function tryParseJSON(raw: string): any | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const { breakdown } = await request.json();
+    const { breakdown, languageNote } = await request.json();
+
+    console.log("Received breakdown:", languageNote); // Log input for debugging
 
     if (!Array.isArray(breakdown) || breakdown.length === 0) {
       return NextResponse.json({ error: 'Missing or invalid breakdown' }, { status: 400 });
@@ -117,7 +120,7 @@ export async function POST(request: NextRequest) {
     const chunks = chunkArray(breakdown, MAX_ITEMS_PER_CHUNK);
 
     const responses = await Promise.allSettled(
-      chunks.map((chunk, i) => callSuggestionModel(client, models[i % models.length], chunk))
+      chunks.map((chunk, i) => callSuggestionModel(client, models[i % models.length], chunk, languageNote))
     );
 
     // Merge all parsed suggestions into a single array

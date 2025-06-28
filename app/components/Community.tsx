@@ -87,7 +87,7 @@ export const Community: React.FC<CommunityProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-gray-900">
@@ -127,37 +127,56 @@ export const Community: React.FC<CommunityProps> = ({
             </button>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+          {/* Category Filter - Desktop */}
+          <div className="hidden sm:flex items-center space-x-2 overflow-x-auto pb-2">
             <button
               onClick={() => setShowSortOptions((prev) => !prev)}
               className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-600"
             >
               <Filter className="h-5 w-5 text-gray-500 flex-shrink-0" />
+              <span>{t("community.filter")}:</span>
             </button>
-            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              {t("community.filter")}:
-            </span>
-            <div className="flex space-x-2">
-              {categories.map((category) => {
-                const Icon = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      selectedCategory === category.id
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{category.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {categories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === category.id
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{category.label}</span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Category Filter - Mobile Sticky Nav */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 flex justify-around sm:hidden">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const isActive = selectedCategory === category.id;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`flex flex-col items-center justify-center px-3 py-2 text-xs font-medium transition-colors ${
+                    isActive
+                      ? "text-blue-600"
+                      : "text-gray-500 hover:text-blue-600"
+                  }`}
+                >
+                  <Icon className="h-5 w-5 mb-1" />
+                  {category.label}
+                </button>
+              );
+            })}
+          </div>
+
           {showSortOptions && (
             <div className="flex flex-wrap gap-2 mt-2">
               <button
@@ -168,7 +187,8 @@ export const Community: React.FC<CommunityProps> = ({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                <ThumbsUp className="h-4 w-4" /> <span>Most Upvotes</span>
+                <ThumbsUp className="h-4 w-4" />{" "}
+                <span>{t("community.sort.mostUpvotes")}</span>
               </button>
               <button
                 onClick={() => setSelectedSort("least-upvotes")}
@@ -178,7 +198,8 @@ export const Community: React.FC<CommunityProps> = ({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                <ThumbsUp className="h-4 w-4" /> <span>Least Upvotes</span>
+                <ThumbsUp className="h-4 w-4" />{" "}
+                <span>{t("community.sort.leastUpvotes")}</span>
               </button>
               <button
                 onClick={() => setSelectedSort("most-replies")}
@@ -188,7 +209,8 @@ export const Community: React.FC<CommunityProps> = ({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                <MessageSquare className="h-4 w-4" /> <span>Most Replies</span>
+                <MessageSquare className="h-4 w-4" />{" "}
+                <span>{t("community.sort.mostReplies")}</span>
               </button>
               <button
                 onClick={() => setSelectedSort("least-replies")}
@@ -198,7 +220,8 @@ export const Community: React.FC<CommunityProps> = ({
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                <MessageSquare className="h-4 w-4" /> <span>Least Replies</span>
+                <MessageSquare className="h-4 w-4" />{" "}
+                <span>{t("community.sort.leastReplies")}</span>
               </button>
             </div>
           )}
@@ -214,6 +237,7 @@ export const Community: React.FC<CommunityProps> = ({
               onBack={() => setSelectedPost(null)}
               onUpvote={onUpvote}
               onReplyPosted={refreshPosts}
+              t={t}
             />
           ) : (
             <>
@@ -247,7 +271,9 @@ export const Community: React.FC<CommunityProps> = ({
                             {post.title}
                           </h3>
                           <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
-                            <span>by {post.author}</span>
+                            <span>{`${t("community.byAuthor")} ${
+                              post.author
+                            }`}</span>
                             {showRegion && <span>•</span>}
                             {showRegion && <span>{post.region}</span>}
                             {showTimestamp && <span>•</span>}
@@ -299,9 +325,7 @@ export const Community: React.FC<CommunityProps> = ({
         {filteredPosts.length === 0 && (
           <div className="text-center py-12">
             <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
-              No posts found matching your criteria.
-            </p>
+            <p className="text-gray-500">{t("community.noResults")}</p>
           </div>
         )}
       </div>
@@ -312,6 +336,7 @@ export const Community: React.FC<CommunityProps> = ({
           onPostCreated={() => {
             refreshPosts();
           }}
+          t={t}
         />
       )}
     </div>

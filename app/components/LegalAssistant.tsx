@@ -10,21 +10,28 @@ import { RegionSelectorModal } from "./RegionSelectorModal";
 import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
 import { logUserActivity } from "../lib/activityLogger";
 import { supabase } from "../lib/supabaseClient";
+import { formatLanguageForPrompt } from "../lib/fetchUserLanguage";
 
 interface LegalAssistantProps {
   t: (key: string) => string;
   initialRegion: string;
   onRegionUpdated?: () => void;
+  language: string;
+  initialQuestion?: string;
+  initialAnswer?: string | null;
 }
 
 export const LegalAssistant: React.FC<LegalAssistantProps> = ({
   t,
   initialRegion,
   onRegionUpdated,
+  language = "en",
+  initialQuestion,
+  initialAnswer,
 }) => {
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(initialQuestion || "");
   const [loading, setLoading] = useState(false);
-  const [answer, setAnswer] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<string | null>(initialAnswer || null);
   const [selectedRegion, setSelectedRegion] = useState(initialRegion);
 
   const [showRegionModal, setShowRegionModal] = useState(false);
@@ -32,28 +39,27 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
   const commonQuestions = [
     {
       id: "1",
-      question:
-        "Can I refuse to pay a special assessment without detailed breakdown?",
-      category: "Assessment Rights",
-      region: "General",
+      question: t("legal.commonQuestion1"),
+      category: t("assessmentRights"),
+      region: t("general"),
     },
     {
       id: "2",
-      question: "What are my rights when charged excessive late fees?",
-      category: "Fee Disputes",
-      region: "General",
+      question: t("legal.commonQuestion2"),
+      category: t("feeDisputes"),
+      region: t("general"),
     },
     {
       id: "3",
-      question: "How long does my HOA have to provide financial documentation?",
-      category: "Documentation Rights",
-      region: "General",
+      question: t("legal.commonQuestion3"),
+      category: t("documentationRights"),
+      region: t("general"),
     },
     {
       id: "4",
-      question: "Can emergency assessments be charged without owner approval?",
-      category: "Emergency Fees",
-      region: "General",
+      question: t("legal.commonQuestion4"),
+      category: t("emergencyFees"),
+      region: t("general"),
     },
   ];
 
@@ -67,7 +73,11 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
       const response = await fetch("/api/analyze-legal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, region: selectedRegion }),
+        body: JSON.stringify({
+          question,
+          region: selectedRegion,
+          languageNote: formatLanguageForPrompt(language),
+        }),
       });
 
       const data = await response.json();
@@ -80,8 +90,18 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
           userId: user.id,
           type: "legal",
           title: question,
-          description: `Asked a legal question for region: ${selectedRegion}`,
+          description: `${t("askedLegalQuestion")} ${selectedRegion}`,
         });
+
+        await supabase.from("legal_assistant_sessions").insert([
+          {
+            user_id: user.id,
+            question,
+            answer: data.answer,
+            region: selectedRegion,
+            language,
+          },
+        ]);
       }
     } catch (err) {
       console.error(err);
@@ -108,15 +128,17 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center space-x-2 text-blue-800">
             <MapPin className="h-5 w-5" />
-            <span className="font-medium">Your Region: {selectedRegion}</span>
+            <span className="font-medium">
+              {t("yourRegion")} {selectedRegion}
+            </span>
           </div>
           <p className="text-sm text-blue-600 mt-1">
-            Legal guidance will be tailored to your jurisdiction.
+            {t("legalGuidance")}
             <button
               className="underline ml-1 hover:text-blue-800"
               onClick={() => setShowRegionModal(true)}
             >
-              Change region
+              {t("changeRegion")}
             </button>
           </p>
         </div>
@@ -128,6 +150,7 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
           onSelect={(region) => setSelectedRegion(region)}
           onRegionUpdated={onRegionUpdated}
           initialRegion={initialRegion}
+          t={t}
         />
       )}
 
@@ -174,7 +197,7 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <BookOpen className="h-5 w-5 mr-2" />
-              Legal Guidance
+              {t("legalGuid")}
             </h3>
             <div className="prose prose-sm max-w-none text-gray-700">
               {answer.split("\n").map((paragraph, index) => {
@@ -209,7 +232,11 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
               })}
             </div>
             <div className="mt-6 pt-4 border-t border-gray-200">
-              <DisputeLetterGenerator aiText={answer || ""} />
+              <DisputeLetterGenerator
+                aiText={answer || ""}
+                t={t}
+                language={language}
+              />
             </div>
           </div>
         </div>

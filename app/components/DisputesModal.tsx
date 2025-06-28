@@ -7,6 +7,7 @@ interface DisputesModalProps {
   onClose: () => void;
   onMarkResolved: (id: string) => Promise<void>;
   onSelectDispute: (dispute: DisputeLetter) => void;
+  t: (key: string) => string;
 }
 
 export const DisputesModal: React.FC<DisputesModalProps> = ({
@@ -14,6 +15,7 @@ export const DisputesModal: React.FC<DisputesModalProps> = ({
   onClose,
   onMarkResolved,
   onSelectDispute,
+  t,
 }) => {
   const handleResolve = async (id: string) => {
     await onMarkResolved(id);
@@ -52,7 +54,8 @@ export const DisputesModal: React.FC<DisputesModalProps> = ({
                     {d.content?.slice(0, 40) || "Untitled Dispute"}...
                   </p>
                   <p className="text-sm text-gray-500 truncate">
-                    Generated on: {new Date(d.created_at).toLocaleDateString()}
+                    {t("generatedOn")}{" "}
+                    {new Date(d.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <button

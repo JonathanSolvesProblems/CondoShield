@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
-export const ActivityModal = ({ onClose }: { onClose: () => void }) => {
+export const ActivityModal = ({
+  onClose,
+  t,
+}: {
+  onClose: () => void;
+  t: (key: string) => string;
+}) => {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -69,10 +75,10 @@ export const ActivityModal = ({ onClose }: { onClose: () => void }) => {
       const diffMinutes = Math.floor(diffMs / (1000 * 60));
       const time =
         diffMinutes < 60
-          ? `${diffMinutes} min ago`
+          ? `${diffMinutes} ${t("minAgo")}`
           : diffMinutes < 1440
-          ? `${Math.floor(diffMinutes / 60)} hrs ago`
-          : `${Math.floor(diffMinutes / 1440)} days ago`;
+          ? `${Math.floor(diffMinutes / 60)} ${t("hrsAgo")}`
+          : `${Math.floor(diffMinutes / 1440)} ${t("daysAgo")}`;
 
       return {
         ...log,
@@ -102,16 +108,18 @@ export const ActivityModal = ({ onClose }: { onClose: () => void }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">All Activity</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {t("allActivity")}
+          </h2>
           <button onClick={onClose}>
             <X className="w-5 h-5 text-gray-500 hover:text-gray-800" />
           </button>
         </div>
         <div className="p-4 space-y-4">
           {loading && activities.length === 0 ? (
-            <p className="text-gray-500 text-center">Loading activity...</p>
+            <p className="text-gray-500 text-center">{t("loadingActivity")}</p>
           ) : activities.length === 0 ? (
-            <p className="text-gray-500 text-center">No activity found.</p>
+            <p className="text-gray-500 text-center">{t("noActivityFound")}</p>
           ) : (
             <>
               {activities.map((activity) => (
@@ -142,7 +150,7 @@ export const ActivityModal = ({ onClose }: { onClose: () => void }) => {
                     className="text-blue-600 hover:underline font-medium text-sm"
                     onClick={handleLoadMore}
                   >
-                    Load more
+                    {t("loadMore")}
                   </button>
                 </div>
               )}

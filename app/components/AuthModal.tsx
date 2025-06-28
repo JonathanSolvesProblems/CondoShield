@@ -1,7 +1,13 @@
 import { supabase } from "../lib/supabaseClient";
 import { useState } from "react";
 
-export const AuthModal = ({ onClose }: { onClose: () => void }) => {
+export const AuthModal = ({
+  onClose,
+  t,
+}: {
+  onClose: () => void;
+  t: (key: string) => string;
+}) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -38,14 +44,14 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-lg">
         <h2 className="text-lg font-semibold mb-4">
-          {mode === "login" ? "Log In" : "Sign Up"}
+          {mode === "login" ? t("auth.loginTitle") : t("auth.signupTitle")}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
             <input
               type="text"
               className="w-full border px-3 py-2 rounded"
-              placeholder="Display Name"
+              placeholder={t("auth.displayName")}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
@@ -54,7 +60,7 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
           <input
             type="email"
             className="w-full border px-3 py-2 rounded"
-            placeholder="Email"
+            placeholder={t("auth.email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -62,7 +68,7 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
           <input
             type="password"
             className="w-full border px-3 py-2 rounded"
-            placeholder="Password"
+            placeholder={t("auth.password")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -71,7 +77,7 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded"
           >
-            {mode === "login" ? "Login" : "Sign Up"}
+            {mode === "login" ? t("auth.loginButton") : t("auth.signupButton")}
           </button>
         </form>
 
@@ -80,29 +86,29 @@ export const AuthModal = ({ onClose }: { onClose: () => void }) => {
             onClick={handleOAuth}
             className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
           >
-            Continue with Google
+            {t("auth.google")}
           </button>
         </div>
 
         <div className="mt-4 text-sm text-center">
           {mode === "login" ? (
             <>
-              Don’t have an account?{" "}
+              {t("auth.noAccount")}{" "}
               <button
                 onClick={() => setMode("signup")}
                 className="text-blue-600"
               >
-                Sign up
+                {t("auth.signupLink")}
               </button>
             </>
           ) : (
             <>
-              Already have an account?{" "}
+              {t("auth.hasAccount")}{" "}
               <button
                 onClick={() => setMode("login")}
                 className="text-blue-600"
               >
-                Log in
+                {t("auth.loginLink")}
               </button>
             </>
           )}

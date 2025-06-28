@@ -22,10 +22,12 @@ import { Assessment, AssessmentItem } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
 import { logUserActivity } from "../lib/activityLogger";
+import { formatLanguageForPrompt } from "../lib/fetchUserLanguage";
 
 interface AssessmentAnalyzerProps {
   t: (key: string) => string;
   selectedAssessment?: Assessment | null;
+  language: string;
 }
 
 const saveAnalysisToDB = async (
@@ -47,6 +49,7 @@ const saveAnalysisToDB = async (
 export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
   t,
   selectedAssessment,
+  language = "en",
 }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AssessmentItem[] | null>(null);
@@ -83,6 +86,7 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("languageNote", formatLanguageForPrompt(language));
 
     try {
       const response = await fetch("/api/analyze-pdf", {
@@ -490,7 +494,11 @@ export const AssessmentAnalyzer: React.FC<AssessmentAnalyzerProps> = ({
             >
               Analyze Another
             </button>
-            <DisputeLetterGenerator aiText={generateDisputeSummary(results)} />
+            <DisputeLetterGenerator
+              aiText={generateDisputeSummary(results)}
+              t={t}
+              language={language}
+            />
           </div>
         </div>
       )}

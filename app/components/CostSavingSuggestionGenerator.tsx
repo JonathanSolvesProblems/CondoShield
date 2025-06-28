@@ -3,17 +3,25 @@ import { FileText, Download, Copy, Sparkles } from "lucide-react";
 import { Assessment, CostSavingSuggestion } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
+import { formatLanguageForPrompt } from "../lib/fetchUserLanguage";
 
 interface CostSavingSuggestionGeneratorProps {
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, any>) => string;
   assessments: Assessment[];
   previousSuggestions: Record<string, CostSavingSuggestion[]>;
   initialSelectedId?: string;
+  language: string;
 }
 
 export const CostSavingSuggestionGenerator: React.FC<
   CostSavingSuggestionGeneratorProps
-> = ({ t, assessments, previousSuggestions, initialSelectedId }) => {
+> = ({
+  t,
+  assessments,
+  previousSuggestions,
+  initialSelectedId,
+  language = "en",
+}) => {
   const [selectedId, setSelectedId] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +54,10 @@ export const CostSavingSuggestionGenerator: React.FC<
       const res = await fetch("/api/generate-suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ breakdown: assessment.breakdown }),
+        body: JSON.stringify({
+          breakdown: assessment.breakdown,
+          languageNote: formatLanguageForPrompt(language),
+        }),
       });
 
       const data = await res.json();
@@ -127,7 +138,7 @@ export const CostSavingSuggestionGenerator: React.FC<
             onChange={(e) => setSelectedId(e.target.value)}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg"
           >
-            <option value="">Select an assessment...</option>
+            <option value=""> {t("savings.selectAssessment")}</option>
             {assessments.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.title} — ${a.amount.toLocaleString()}
@@ -166,7 +177,12 @@ export const CostSavingSuggestionGenerator: React.FC<
               <span>{t("savings.copy")}</span>
             </button>
             <DisputeLetterGenerator
-              aiText={generateSavingsSummary(previousSuggestions[selectedId])}
+              aiText={generateSavingsSummary(
+                previousSuggestions[selectedId],
+                t
+              )}
+              t={t}
+              language={language}
             />
           </div>
 
@@ -185,27 +201,30 @@ export const CostSavingSuggestionGenerator: React.FC<
   );
 };
 
-const generateSavingsSummary = (items: CostSavingSuggestion[]): string => {
+const generateSavingsSummary = (
+  items: CostSavingSuggestion[],
+  t: (key: string, options?: Record<string, any>) => string
+): string => {
   if (!items || items.length === 0) {
-    return "After reviewing your assessment, no immediate cost-saving opportunities were found.";
+    return t("savings.noOpportunities");
   }
   const total = items.reduce((sum, s) => sum + (s.estimated_savings || 0), 0);
   const lines = items.map(
     (s, i) =>
-      `${i + 1}. ${
-        s.suggestion
-      } (Est. Savings: $${s.estimated_savings?.toLocaleString()})`
+      `${i + 1}. ${s.suggestion} (${t(
+        "savings.estSavings"
+      )}: $${s.estimated_savings?.toLocaleString()})`
   );
   return [
-    `Subject: Recommendations for Cost Savings`,
+    t("savings.emailSubject"),
     ``,
-    `Based on your condo assessment, here are some actionable cost-saving suggestions totaling an estimated $${total.toLocaleString()}:`,
+    t("savings.emailIntro", { total: total.toLocaleString() }),
     ``,
     ...lines,
     ``,
-    `We recommend reviewing these items and discussing them with your association board or property manager.`,
+    t("savings.emailNote"),
     ``,
-    `Sincerely,`,
+    t("savings.emailClosing"),
     `[Your Name]`,
   ].join("\n");
 };

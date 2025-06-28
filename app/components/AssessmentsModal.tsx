@@ -10,6 +10,7 @@ interface Props {
   onSelect: (assessment: Assessment) => void;
   onDelete: (assessmentId: string) => Promise<void>;
   onViewSavings: (assessment: Assessment) => void;
+  t: (key: string) => string;
 }
 
 export const AssessmentsModal: React.FC<Props> = ({
@@ -19,6 +20,7 @@ export const AssessmentsModal: React.FC<Props> = ({
   onSelect,
   onDelete,
   onViewSavings,
+  t,
 }) => {
   return (
     <Dialog
@@ -30,13 +32,13 @@ export const AssessmentsModal: React.FC<Props> = ({
       <Dialog.Panel className="bg-white max-h-[80vh] overflow-y-auto rounded-xl shadow-xl p-6 w-full max-w-xl z-10">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-gray-900">
-            Your Assessments
+            {t("yourAssessments")}
           </h3>
           <button
             onClick={onClose}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            Close
+            {t("close")}
           </button>
         </div>
 
@@ -67,13 +69,13 @@ export const AssessmentsModal: React.FC<Props> = ({
                   </p>
                   {a.dateReceived && (
                     <p className="text-xs text-gray-400">
-                      Last updated:{" "}
+                      {t("lastUpdated:")}{" "}
                       {new Date(a.dateReceived).toLocaleDateString()}
                     </p>
                   )}
                   {hasSuggestions && (
                     <p className="text-sm text-green-600 font-medium mt-1">
-                      Potential Saved: ${savings.toLocaleString()}
+                      {t("potentialSaved:")} ${savings.toLocaleString()}
                     </p>
                   )}
                 </div>

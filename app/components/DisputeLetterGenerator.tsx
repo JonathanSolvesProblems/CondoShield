@@ -5,12 +5,15 @@ import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { supabase } from "../lib/supabaseClient";
+import { formatLanguageForPrompt } from "../lib/fetchUserLanguage";
 
 interface DisputeLetterGeneratorProps {
   aiText?: string;
   triggerText?: string;
   preloadedLetter?: string;
   openExternally?: boolean;
+  t: (key: string, options?: Record<string, any>) => string;
+  language: string;
 }
 
 const saveDisputeLetter = async (content: string, title?: string) => {
@@ -39,6 +42,8 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
   triggerText = "Generate Dispute Letter",
   preloadedLetter,
   openExternally,
+  t,
+  language = "en",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -61,7 +66,10 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
       const res = await fetch("/api/generate-dispute-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context: aiText }),
+        body: JSON.stringify({
+          context: aiText,
+          languageNote: formatLanguageForPrompt(language),
+        }),
       });
 
       const data = await res.json();
@@ -191,9 +199,8 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
 
     const lines = raw.split("\n");
 
-    let subjectLine = "Condo Dispute Letter";
+    let subjectLine = t("dispute.emailSubject");
     const bodyLines: string[] = [];
-
     for (const line of lines) {
       if (line.toLowerCase().startsWith("subject:")) {
         subjectLine = line.replace(/subject:/i, "").trim();
@@ -217,7 +224,7 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
         className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50"
       >
         <FileText className="h-5 w-5" />
-        <span>{generating ? "Generating..." : triggerText}</span>
+        <span>{generating ? t("dispute.generating") : triggerText}</span>
       </button>
 
       {isOpen && (
@@ -231,7 +238,9 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
             <Dialog.Panel className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl z-50 relative">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-800">
-                  {openExternally ? "Saved" : "Editable"} Dispute Letter
+                  {openExternally
+                    ? t("dispute.savedTitle")
+                    : t("dispute.editableTitle")}
                 </h2>
                 <button onClick={() => setIsOpen(false)}>
                   <X className="h-5 w-5 text-gray-600" />
@@ -289,13 +298,11 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
                     >
                       <FileText className="h-4 w-4" />
                       <span>
-                        <button>
-                          {saved
-                            ? "Saved"
-                            : saving
-                            ? "Saving..."
-                            : "Save Dispute"}
-                        </button>
+                        {saved
+                          ? t("saved")
+                          : saving
+                          ? t("dispute.saving")
+                          : t("dispute.save")}
                       </span>
                     </button>
                   </>
@@ -306,21 +313,21 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Export PDF</span>
+                  <span>{t("dispute.exportPdf")}</span>
                 </button>
                 <button
                   onClick={() => exportWord()}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center space-x-2"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Export Word</span>
+                  <span>{t("dispute.exportWord")}</span>
                 </button>
                 <button
                   onClick={() => sendViaGmail()}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2"
                 >
                   <Mail className="h-4 w-4" />
-                  <span>Send via Gmail</span>
+                  <span>{t("dispute.sendGmail")}</span>
                 </button>
               </div>
             </Dialog.Panel>

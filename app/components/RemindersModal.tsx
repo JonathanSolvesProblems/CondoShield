@@ -2,7 +2,13 @@ import { Calendar, X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import React, { useEffect, useState } from "react";
 
-export const RemindersModal = ({ onClose }: { onClose: () => void }) => {
+export const RemindersModal = ({
+  onClose,
+  t,
+}: {
+  onClose: () => void;
+  t: (key: string) => string;
+}) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,9 +63,9 @@ export const RemindersModal = ({ onClose }: { onClose: () => void }) => {
         </div>
         <div className="p-4 space-y-4">
           {loading ? (
-            <p className="text-gray-500 text-center">Loading reminders...</p>
+            <p className="text-gray-500 text-center">{t("loadingReminders")}</p>
           ) : reminders.length === 0 ? (
-            <p className="text-gray-500 text-center">No reminders found.</p>
+            <p className="text-gray-500 text-center">{t("noRemindersFound")}</p>
           ) : (
             reminders.map((reminder) => (
               <div

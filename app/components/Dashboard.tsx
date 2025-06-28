@@ -20,6 +20,12 @@ import { DisputeLetterGenerator } from "./DisputeLetterGenerator";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { RemindersModal } from "./RemindersModal";
+import { enUS, fr, Locale } from "date-fns/locale";
+
+const localeMap: Record<string, Locale> = {
+  en: enUS,
+  fr: fr,
+};
 
 interface DashboardProps {
   t: (key: string) => string;
@@ -34,6 +40,7 @@ interface DashboardProps {
   onViewSavings: (assessment: Assessment) => void;
   reminders: any[];
   setReminders: React.Dispatch<React.SetStateAction<any[]>>;
+  language: string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -49,6 +56,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onViewSavings,
   reminders,
   setReminders,
+  language,
 }) => {
   const totalAssessments = assessments.length;
   const activeDisputes = disputes.length;
@@ -273,7 +281,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Amount</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t("dashboard.totalAmount")}
+              </p>
               <p className="text-3xl font-bold text-gray-900">
                 ${totalAmount.toLocaleString()}
               </p>
@@ -353,20 +363,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
-              Upcoming Deadlines
+              {t("dashboard.upcomingDeadlines")}
             </h3>
             <button
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               onClick={() => setShowRemindersModal(true)}
             >
-              View All
+              {t("dashboard.viewAll")}
             </button>
           </div>
 
           <div className="p-6 space-y-4">
             {upcomingDeadlines.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
-                No upcoming deadlines
+                {t("dashboard.noUpcomingDeadlines")}
               </p>
             ) : (
               upcomingDeadlines.map((item) => (
@@ -389,9 +399,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      {new Date(item.dueDate).toLocaleDateString()}
+                      {new Date(item.dueDate).toLocaleDateString(language)}
                     </p>
-                    <p className="text-xs text-gray-500">Due date</p>
+                    <p className="text-xs text-gray-500">{t("dueDate")}</p>
                   </div>
                   <button
                     onClick={async () => {
@@ -416,7 +426,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Add Reminder Form */}
           <div className="p-6 border-t border-gray-200 mt-4">
             <h4 className="text-md font-semibold text-gray-900 mb-4">
-              Add Deadline
+              {t("dashboard.addDeadline")}
             </h4>
 
             <div className="space-y-4">
@@ -433,8 +443,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 showTimeSelect
                 timeIntervals={15}
                 timeFormat="HH:mm"
-                dateFormat="MMMM d, yyyy h:mm aa"
-                placeholderText="Select date and time"
+                dateFormat="Pp"
+                locale={localeMap[language]}
+                placeholderText={t("dashboard.selectDate")}
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
 
@@ -484,7 +495,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }}
                 className="bg-blue-600 text-white px-4 py-2 rounded"
               >
-                Add Reminder
+                {t("dashboard.addReminder")}
               </button>
             </div>
           </div>
@@ -513,6 +524,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             setSelectedDispute(dispute); // set the selected dispute for editing
             setIsDisputesOpen(false); // optionally close the modal
           }}
+          t={t}
         />
       )}
 
@@ -520,6 +532,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <DisputeLetterGenerator
           preloadedLetter={selectedDispute.content}
           openExternally={true}
+          t={t}
+          language={language}
         />
       )}
 
@@ -537,14 +551,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
             onViewSavings(assessment);
             setIsAssessmentsOpen(false);
           }}
+          t={t}
         />
       )}
 
       {showActivityModal && (
-        <ActivityModal onClose={() => setShowActivityModal(false)} />
+        <ActivityModal onClose={() => setShowActivityModal(false)} t={t} />
       )}
       {showRemindersModal && (
-        <RemindersModal onClose={() => setShowRemindersModal(false)} />
+        <RemindersModal onClose={() => setShowRemindersModal(false)} t={t} />
       )}
     </div>
   );

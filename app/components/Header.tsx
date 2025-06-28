@@ -3,6 +3,7 @@ import { Shield, Globe } from "lucide-react";
 import { Language } from "../types";
 import { supabase } from "../lib/supabaseClient";
 import { AuthModal } from "./AuthModal";
+import { Menu, X } from "lucide-react";
 
 interface HeaderProps {
   currentPage: string;
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [user, setUser] = useState<any>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
@@ -120,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={handleLogout}
                   className="px-3 py-2 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
                 >
-                  Logout
+                  {t("auth.logout")}
                 </button>
               </div>
             ) : (
@@ -128,22 +130,39 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setShowAuth(true)}
                 className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                Login
+                {t("auth.loginButton")}
               </button>
             )}
           </div>
 
-          {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+          {showAuth && <AuthModal onClose={() => setShowAuth(false)} t={t} />}
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden border-t border-gray-200 py-3">
-          <div className="flex space-x-4 overflow-x-auto">
+        <div className="md:hidden flex items-center justify-end w-full">
+          <button
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
+          >
+            {mobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+
+        {/* Slide-down Mobile Nav */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-2 space-y-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onPageChange(item.id)}
-                className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+                onClick={() => {
+                  onPageChange(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`block w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   currentPage === item.id
                     ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -153,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

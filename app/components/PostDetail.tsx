@@ -8,6 +8,7 @@ interface PostDetailProps {
   onBack: () => void;
   onUpvote: (id: number) => void;
   onReplyPosted: () => void;
+  t: (key: string) => string;
 }
 
 export const PostDetail: React.FC<PostDetailProps> = ({
@@ -15,6 +16,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
   onBack,
   onUpvote,
   onReplyPosted,
+  t,
 }) => {
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState<any[]>([]);
@@ -84,13 +86,15 @@ export const PostDetail: React.FC<PostDetailProps> = ({
         onClick={onBack}
         className="flex items-center mb-4 text-blue-600 hover:underline"
       >
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+        <ArrowLeft className="w-4 h-4 mr-2" /> {t("postDetail.back")}
       </button>
 
       <h2 className="text-2xl font-bold mb-2">{post.title}</h2>
 
       <div className="text-gray-500 text-sm mb-4 space-x-2">
-        <span>by {post.author}</span>
+        <span>
+          {t("postDetail.by")} {post.author}
+        </span>{" "}
         {post.region && <span>•</span>}
         <span>{post.region}</span>
         {post.timestamp && <span>•</span>}
@@ -105,18 +109,20 @@ export const PostDetail: React.FC<PostDetailProps> = ({
           onClick={() => onUpvote(post.id)}
         >
           <ThumbsUp className="w-4 h-4 mr-1" />
-          {post.upvotes} Upvotes
+          {post.upvotes} {t("postDetail.upvotes")}
         </button>
       </div>
 
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2">Reply</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          {t("postDetail.reply.title")}
+        </h3>
         <textarea
           value={reply}
           onChange={(e) => setReply(e.target.value)}
           className="w-full border rounded p-2 mb-2"
           rows={3}
-          placeholder="Write a reply..."
+          placeholder={t("postDetail.reply.placeholder")}
         />
 
         {/* Anonymous Toggle */}
@@ -130,21 +136,25 @@ export const PostDetail: React.FC<PostDetailProps> = ({
                 : "bg-gray-100 text-gray-600"
             }`}
           >
-            {isAnonymous ? "Replying Anonymously" : "Reply Anonymously"}
+            {isAnonymous
+              ? t("postDetail.reply.anonymousOn")
+              : t("postDetail.reply.anonymousOff")}
           </button>
         </div>
         <button
           onClick={handleReplySubmit}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Submit
+          {t("postDetail.reply.submit")}
         </button>
       </div>
 
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2">Replies</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          {t("postDetail.replies.title")}
+        </h3>
         {replies.length === 0 && (
-          <p className="text-gray-500">No replies yet. Be the first!</p>
+          <p className="text-gray-500">{t("postDetail.replies.empty")}</p>
         )}
         {replies.map((r, index) => (
           <div key={index} className="border-t pt-3 mt-3">

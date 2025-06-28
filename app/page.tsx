@@ -37,10 +37,11 @@ export default function Home() {
   >({});
   const [selectedSavingAssessmentId, setSelectedSavingAssessmentId] =
     useState<string>("");
-  const [userRegion, setUserRegion] = useState<string>(
-    "North America (Canada/USA)"
-  );
+  const [userRegion, setUserRegion] = useState<string>("northAmerica");
+
   const [reminders, setReminders] = useState<any[]>([]);
+  const [legalQuestion, setLegalQuestion] = useState<string>("");
+  const [legalAnswer, setLegalAnswer] = useState<string | null>(null);
 
   useEffect(() => {
     const {
@@ -132,6 +133,35 @@ export default function Home() {
       setUserActivityLogs(activityData ?? []);
     }
   };
+
+  const fetchLatestLegalSession = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("legal_assistant_sessions")
+      .select("question, answer, region, language")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Failed to load latest legal session:", error.message);
+      return;
+    }
+
+    if (data) {
+      setLegalQuestion(data.question);
+      setLegalAnswer(data.answer);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPage === "legal") {
+      fetchLatestLegalSession();
+    }
+  }, [currentPage]);
 
   const fetchLatestAnalysis = async () => {
     if (selectedAssessment) return; // If user selected an assessment, skip fetching latest
@@ -317,6 +347,7 @@ export default function Home() {
             }}
             reminders={reminders}
             setReminders={setReminders}
+            language={language}
           />
         );
       case "analyzer":
@@ -329,14 +360,27 @@ export default function Home() {
                 : null)
             }
             t={t}
+            language={language}
           />
         );
       case "legal":
+        if (!legalAnswer && !legalQuestion) {
+          fetchLatestLegalSession();
+          return (
+            <div className="flex justify-center items-center h-64 text-blue-600 text-lg font-medium space-x-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span>{t("legal.loadingSession")}</span>
+            </div>
+          );
+        }
         return (
           <LegalAssistant
             t={t}
             initialRegion={userRegion}
             onRegionUpdated={fetchUserRegion}
+            language={language}
+            initialQuestion={legalQuestion}
+            initialAnswer={legalAnswer}
           />
         );
       case "community":
@@ -355,6 +399,7 @@ export default function Home() {
             assessments={assessments}
             previousSuggestions={suggestionsMap}
             initialSelectedId={selectedSavingAssessmentId}
+            language={language}
           />
         );
       default:
@@ -377,6 +422,7 @@ export default function Home() {
           }}
           reminders={reminders}
           setReminders={setReminders}
+          language={language}
         />;
     }
   };

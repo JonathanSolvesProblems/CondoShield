@@ -4,7 +4,7 @@ import { AzureKeyCredential } from '@azure/core-auth';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { question, region } = body;
+  const { question, region, languageNote } = body;
 
   if (!question || !region) {
     return NextResponse.json({ error: 'Missing question or region' }, { status: 400 });
@@ -15,13 +15,13 @@ export async function POST(request: NextRequest) {
     new AzureKeyCredential(process.env.GITHUB_TOKEN || "")
   );
 
-  const prompt = `You are a legal assistant helping condo owners with region-specific guidance.\n\nRegion: ${region}\nQuestion: ${question}\n\nProvide a clear, structured answer for a layperson.`;
+  const prompt = `You are a legal assistant helping condo owners with region-specific guidance.\n\nRegion: ${region}\nQuestion: ${question}\n\nProvide a clear, structured answer for a layperson. ${languageNote}`;
 
   const result = await client.path('/chat/completions').post({
     body: {
       model: 'openai/gpt-4o',
       messages: [
-        { role: "system", content: "You are a helpful legal assistant." },
+        { role: "system", content: `You are a helpful legal assistant. ${languageNote}` },
         { role: "user", content: prompt },
       ],
     },

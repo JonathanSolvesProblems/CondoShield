@@ -3,7 +3,7 @@ import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
 import { AzureKeyCredential } from '@azure/core-auth';
 
 export async function POST(req: NextRequest) {
-  const { context } = await req.json();
+  const { context, languageNote } = await req.json();
 
   if (!context) {
     return NextResponse.json({ error: 'Missing context' }, { status: 400 });
@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: "You are a helpful legal assistant who drafts formal letters.",
+          content: `You are a helpful legal assistant who drafts formal letters. ${languageNote}`,
         },
         {
           role: "user",
-          content: `Based on the following context, generate a formal dispute letter. Use {{placeholders}} for user-provided details like dates, names, amounts, or unit numbers. Do not include sections for sender or recipient addresses or contact information at the top of the letter. Return only the letter content, no extra commentary.\n\n${context}`,
+          content: `Based on the following context, generate a formal dispute letter. Use {{placeholders}} for user-provided details like dates, names, amounts, or unit numbers. Do not include sections for sender or recipient addresses or contact information at the top of the letter. ${languageNote}\nReturn only the letter content, no extra commentary.\n\n${context}`,
         },
       ],
     },

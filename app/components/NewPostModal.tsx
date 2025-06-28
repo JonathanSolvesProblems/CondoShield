@@ -6,9 +6,11 @@ import { logUserActivity } from "../lib/activityLogger";
 export const NewPostModal = ({
   onClose,
   onPostCreated,
+  t,
 }: {
   onClose: () => void;
   onPostCreated: () => void;
+  t: (key: string) => string;
 }) => {
   const [form, setForm] = useState({
     title: "",
@@ -30,7 +32,7 @@ export const NewPostModal = ({
     e.preventDefault();
     const user = (await supabase.auth.getUser()).data.user;
 
-    if (!user) return alert("You must be logged in to post.");
+    if (!user) return alert(`${t("newPostModal.error.notLoggedIn")}`);
 
     const { error } = await supabase.from("community_posts").insert({
       ...form,
@@ -60,12 +62,12 @@ export const NewPostModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white p-6 rounded-lg w-full max-w-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Create New Post</h2>
+        <h2 className="text-xl font-bold mb-4">{t("newPostModal.title")}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
             name="title"
-            placeholder="Title"
+            placeholder={t("newPostModal.placeholder.title")}
             value={form.title}
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded"
@@ -73,7 +75,7 @@ export const NewPostModal = ({
           />
           <textarea
             name="content"
-            placeholder="Content"
+            placeholder={t("newPostModal.placeholder.content")}
             value={form.content}
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded"
@@ -82,7 +84,7 @@ export const NewPostModal = ({
           <input
             type="text"
             name="region"
-            placeholder="Region (e.g., Miami, FL)"
+            placeholder={t("newPostModal.placeholder.region")}
             value={form.region}
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded"
@@ -94,10 +96,18 @@ export const NewPostModal = ({
             onChange={handleChange}
             className="w-full px-4 py-2 border rounded"
           >
-            <option value="warning">Warning</option>
-            <option value="success">Success</option>
-            <option value="question">Question</option>
-            <option value="advice">Advice</option>
+            <option value="warning">
+              {t("newPostModal.category.warning")}
+            </option>
+            <option value="success">
+              {" "}
+              {t("newPostModal.category.success")}
+            </option>
+            <option value="question">
+              {" "}
+              {t("newPostModal.category.question")}
+            </option>
+            <option value="advice"> {t("newPostModal.category.advice")}</option>
           </select>
 
           {/* Anonymous Toggle */}
@@ -116,7 +126,9 @@ export const NewPostModal = ({
               ) : (
                 <UserCheck className="w-4 h-4 mr-1" />
               )}
-              {isAnonymous ? "Posting as Anonymous" : "Posting with Name"}
+              {isAnonymous
+                ? `${t("newPostModal.anonymous.postingAnonymous")}`
+                : `${t("newPostModal.anonymous.postingNamed")}`}
             </button>
           </div>
 
@@ -126,13 +138,13 @@ export const NewPostModal = ({
               onClick={onClose}
               className="px-4 py-2 bg-gray-200 rounded"
             >
-              Cancel
+              {t("newPostModal.button.cancel")}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
-              Post
+              {t("newPostModal.button.post")}
             </button>
           </div>
         </form>
