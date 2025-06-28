@@ -63,8 +63,9 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
     },
   ];
 
-  const handleSubmitQuestion = async () => {
-    if (!question.trim()) return;
+  const handleSubmitQuestion = async (customQuestion?: string) => {
+    const finalQuestion = (customQuestion ?? question).trim();
+    if (!finalQuestion) return;
 
     setLoading(true);
     setAnswer(null);
@@ -74,7 +75,7 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question,
+          question: finalQuestion,
           region: selectedRegion,
           languageNote: formatLanguageForPrompt(language),
         }),
@@ -89,14 +90,14 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
         await logUserActivity({
           userId: user.id,
           type: "legal",
-          title: question,
+          title: finalQuestion,
           description: `${t("askedLegalQuestion")} ${selectedRegion}`,
         });
 
         await supabase.from("legal_assistant_sessions").insert([
           {
             user_id: user.id,
-            question,
+            question: finalQuestion,
             answer: data.answer,
             region: selectedRegion,
             language,
@@ -171,7 +172,7 @@ export const LegalAssistant: React.FC<LegalAssistantProps> = ({
             />
 
             <button
-              onClick={handleSubmitQuestion}
+              onClick={() => handleSubmitQuestion()}
               disabled={!question.trim() || loading}
               className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
             >

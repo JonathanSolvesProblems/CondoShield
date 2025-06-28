@@ -37,7 +37,9 @@ export default function Home() {
   >({});
   const [selectedSavingAssessmentId, setSelectedSavingAssessmentId] =
     useState<string>("");
-  const [userRegion, setUserRegion] = useState<string>("northAmerica");
+  const [userRegion, setUserRegion] = useState<string>(
+    t("regions.northAmerica")
+  );
 
   const [reminders, setReminders] = useState<any[]>([]);
   const [legalQuestion, setLegalQuestion] = useState<string>("");
