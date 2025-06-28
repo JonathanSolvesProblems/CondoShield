@@ -42,12 +42,26 @@ export default function Home() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [legalQuestion, setLegalQuestion] = useState<string>("");
   const [legalAnswer, setLegalAnswer] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      const user = session?.user ?? null;
+
+      setUser(user);
+
+      if (user) {
         // ✅ User just logged in — fetch fresh data
         loadData();
         fetchLatestAnalysis();
@@ -364,7 +378,7 @@ export default function Home() {
           />
         );
       case "legal":
-        if (!legalAnswer && !legalQuestion) {
+        if (!legalAnswer && !legalQuestion && user) {
           fetchLatestLegalSession();
           return (
             <div className="flex justify-center items-center h-64 text-blue-600 text-lg font-medium space-x-2">

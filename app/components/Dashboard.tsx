@@ -21,6 +21,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { RemindersModal } from "./RemindersModal";
 import { enUS, fr, Locale } from "date-fns/locale";
+import Image from "next/image";
 
 const localeMap: Record<string, Locale> = {
   en: enUS,
@@ -491,7 +492,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   }
 
                   setReminders((prev) => [...prev, data]);
-                  setNewReminder({ title: "", description: "", due_date: "" });
+                  setNewReminder({
+                    title: "",
+                    description: "",
+                    due_date: "",
+                  });
                 }}
                 className="bg-blue-600 text-white px-4 py-2 rounded"
               >
@@ -561,6 +566,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {showRemindersModal && (
         <RemindersModal onClose={() => setShowRemindersModal(false)} t={t} />
       )}
+      <div className="space-y-6 pb-20 md:pb-0">
+        <a
+          href="https://bolt.new"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="
+    fixed bottom-4 right-1
+    md:bottom-4 md:right-4 md:mr-0
+    z-50 cursor-pointer
+    w-16 h-16 md:w-20 md:h-20
+  "
+        >
+          <Image
+            src="/boltbadge.svg"
+            alt="Bolt.new Badge"
+            fill
+            style={{ objectFit: "contain" }}
+            sizes="64px, 80px"
+            priority={true}
+          />
+        </a>
+      </div>
     </div>
   );
 };
