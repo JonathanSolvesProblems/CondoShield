@@ -4,6 +4,3 @@
 
 [functions]
   directory = ".netlify/functions-internal"
-
-[[plugins]]
-  package = "@netlify/next"
