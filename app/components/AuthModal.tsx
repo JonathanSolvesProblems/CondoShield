@@ -36,9 +36,6 @@ export const AuthModal = ({
   const handleOAuth = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: "https://condo-shield.vercel.app/",
-      },
     });
     if (error) alert(error.message);
   };
