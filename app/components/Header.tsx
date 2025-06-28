@@ -33,7 +33,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
+    const fetchUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+
+    fetchUser();
 
     const {
       data: { subscription },
@@ -116,7 +123,10 @@ export const Header: React.FC<HeaderProps> = ({
             {user ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
-                  {user.user_metadata?.display_name || "Anonymous"}
+                  {user.user_metadata?.full_name ||
+                    user.user_metadata?.name ||
+                    user.user_metadata?.email ||
+                    "Anonymous"}
                 </span>
                 <button
                   onClick={handleLogout}
