@@ -579,7 +579,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   "
         >
           <Image
-            src="/boltbadge.svg"
+            src="./boltbadge.svg"
             alt="Bolt.new Badge"
             fill
             style={{ objectFit: "contain" }}
