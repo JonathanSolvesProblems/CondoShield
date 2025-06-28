@@ -47,31 +47,36 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const getUser = async () => {
+    const initUser = async () => {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        loadData();
+        fetchLatestAnalysis();
+        fetchSuggestions();
+        fetchUserRegion();
+        fetchPosts();
+      }
     };
 
-    getUser();
+    initUser();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user ?? null;
-
       setUser(user);
 
       if (user) {
-        // ✅ User just logged in — fetch fresh data
         loadData();
         fetchLatestAnalysis();
         fetchSuggestions();
         fetchUserRegion();
         fetchPosts();
       } else {
-        // 🚪 User logged out — clear state if needed
         setAssessments([]);
         setDisputes([]);
         setLatestAnalysis(null);
