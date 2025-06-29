@@ -347,17 +347,10 @@ export default function Home() {
       return;
     }
 
-    let logAction = "Upvoted";
+    await fetchPosts();
 
-    setPosts((prevPosts) => {
-      const prevPost = prevPosts.find((p) => p.id === updatedPost.id);
-      if (prevPost && updatedPost.upvotes < prevPost.upvotes) {
-        logAction = "Removed upvote from";
-      }
-      return prevPosts.map((post) =>
-        post.id === updatedPost.id ? updatedPost : post
-      );
-    });
+    const logAction =
+      updatedPost.upvotes > 0 ? "Upvoted" : "Removed upvote from";
 
     await supabase.from("user_activity_logs").insert({
       user_id: user.id,
