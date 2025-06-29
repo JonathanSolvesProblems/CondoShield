@@ -68,10 +68,12 @@ export const RegionSelectorModal: React.FC<RegionSelectorModalProps> = ({
   }, [initialRegion, t]);
 
   const handleSubmit = async () => {
-    let fullRegion = continent;
-    if (country) fullRegion += ` (${country}`;
+    const regionLabel = t(`regions.${continent}`);
+    const countryLabel = t(`countries.${country}`);
+    let fullRegion = regionLabel;
+    if (countryLabel) fullRegion += ` (${countryLabel}`;
     if (provinceOrState) fullRegion += `/${provinceOrState}`;
-    if (country) fullRegion += ")";
+    if (countryLabel) fullRegion += ")";
 
     const {
       data: { user },

@@ -237,18 +237,25 @@ export default function Home() {
     }
 
     if (data) {
-      const region = `${data.continent}${
-        data.country
-          ? ` (${data.country}${data.region ? `/${data.region}` : ""})`
-          : ""
-      }`;
+      const continentLabel = t(`regions.${data.continent}`);
+      const countryLabel = data.country ? t(`countries.${data.country}`) : "";
+      const regionLabel = data.region || "";
+
+      const region = countryLabel
+        ? `${continentLabel} (${countryLabel}${
+            regionLabel ? `/${regionLabel}` : ""
+          })`
+        : continentLabel;
+
       setUserRegion(region);
 
       if (data.language === "en" || data.language === "fr") {
         setLanguage(data.language);
       }
     } else {
-      setUserRegion("North America (Canada/USA)");
+      setUserRegion(
+        t("regions.northAmerica") + " (" + t("countries.canada") + ")"
+      );
     }
   };
 
