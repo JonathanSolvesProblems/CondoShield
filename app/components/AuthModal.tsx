@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useState } from "react";
 
@@ -31,9 +32,7 @@ export const AuthModal = ({
       if (error) {
         setSignupMessage(`❌ ${error.message}`);
       } else {
-        setSignupMessage(
-          "✅ Signup successful! Please check your email to confirm your account. Make sure to check your junk or spam folder. Once confirmed, you can log in."
-        );
+        setSignupMessage(t("auth.signupSuccess"));
         setMode("login"); // Optional
       }
     } else {
@@ -59,12 +58,21 @@ export const AuthModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-lg">
+      <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-lg relative">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         <h2 className="text-lg font-semibold mb-4">
           {mode === "login" ? t("auth.loginTitle") : t("auth.signupTitle")}
         </h2>
+
         {signupMessage && (
-          <div className="mt-2 text-sm text-center p-2 bg-blue-100 text-blue-800 rounded">
+          <div className="mt-4 mb-4 px-4 py-3 rounded text-sm bg-blue-50 text-blue-800 border border-blue-200 whitespace-pre-line">
             {signupMessage}
           </div>
         )}
