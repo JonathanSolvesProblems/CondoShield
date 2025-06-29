@@ -322,29 +322,49 @@ export default function Home() {
 
   // Upvote handler to pass down
   const handleUpvote = async (postId: number) => {
-    const { data: updatedPost, error } = await supabase.rpc(
-      "increment_upvote_return",
-      { post_id: postId }
-    );
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (error || !updatedPost) {
-      console.error("Upvote failed", error?.message);
+    if (userError || !user) {
+      console.error("Cannot upvote: user not authenticated");
       return;
     }
 
-    setPosts((prev) =>
-      prev.map((post) => (post.id === postId ? updatedPost : post))
-    );
+    const { data, error } = await supabase.rpc("toggle_upvote_return", {
+      post_id_arg: postId,
+      user_id_arg: user.id,
+    });
 
-    const user = (await supabase.auth.getUser()).data.user;
-    if (user) {
-      await supabase.from("user_activity_logs").insert({
-        user_id: user.id,
-        type: "community",
-        title: `Upvoted post: ${updatedPost.title}`,
-        description: `Gave an upvote to a post in ${updatedPost.region} under ${updatedPost.category}`,
-      });
+    const updatedPost = Array.isArray(data) && data.length > 0 ? data[0] : data;
+
+    if (error || !updatedPost) {
+      console.error(
+        "Toggle upvote failed:",
+        error?.message || "No post returned"
+      );
+      return;
     }
+
+    let logAction = "Upvoted";
+
+    setPosts((prevPosts) => {
+      const prevPost = prevPosts.find((p) => p.id === updatedPost.id);
+      if (prevPost && updatedPost.upvotes < prevPost.upvotes) {
+        logAction = "Removed upvote from";
+      }
+      return prevPosts.map((post) =>
+        post.id === updatedPost.id ? updatedPost : post
+      );
+    });
+
+    await supabase.from("user_activity_logs").insert({
+      user_id: user.id,
+      type: "community",
+      title: `${logAction} post: ${updatedPost.title}`,
+      description: `${logAction} a post in ${updatedPost.region} under ${updatedPost.category}`,
+    });
   };
 
   const totalSavings = Object.values(suggestionsMap)
