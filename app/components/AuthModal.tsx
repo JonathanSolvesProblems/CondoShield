@@ -12,25 +12,42 @@ export const AuthModal = ({
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [displayName, setDisplayName] = useState("");
+  const [signupMessage, setSignupMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                display_name: displayName,
-              },
-            },
-          });
+    if (mode === "signup") {
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+          },
+        },
+      });
 
-    if (error) alert(error.message);
-    else onClose();
+      if (error) {
+        setSignupMessage(`❌ ${error.message}`);
+      } else {
+        setSignupMessage(
+          "✅ Signup successful! Please check your email to confirm your account. Make sure to check your junk or spam folder. Once confirmed, you can log in."
+        );
+        setMode("login"); // Optional
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setSignupMessage(`❌ ${error.message}`);
+      } else {
+        onClose();
+      }
+    }
   };
 
   const handleOAuth = async () => {
@@ -46,6 +63,11 @@ export const AuthModal = ({
         <h2 className="text-lg font-semibold mb-4">
           {mode === "login" ? t("auth.loginTitle") : t("auth.signupTitle")}
         </h2>
+        {signupMessage && (
+          <div className="mt-2 text-sm text-center p-2 bg-blue-100 text-blue-800 rounded">
+            {signupMessage}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
             <input

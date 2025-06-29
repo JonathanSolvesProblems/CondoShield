@@ -216,7 +216,8 @@ const translations = {
   "auth.loginLink": "Log in",
   "auth.logout": "Logout",
   "auth.anonymous": "Anonymous",
-  "legal.loadingSession": "Loading legal session..."
+  "legal.loadingSession": "Loading legal session...",
+  "auth.signupSuccess": "✅ Signup successful! Please check your email to confirm your account. Make sure to check your junk or spam folder. Once confirmed, you can log in.",
   },
   fr: {
     'app.title': 'CondoShield',
@@ -416,7 +417,8 @@ const translations = {
     "auth.loginLink": "Connectez-vous",
     "auth.logout": "Déconnexion",
     "auth.anonymous": "Anonyme",
-    "legal.loadingSession": "Chargement de la session juridique..."
+    "legal.loadingSession": "Chargement de la session juridique...",
+    "auth.signupSuccess": "✅ Inscription réussie ! Veuillez vérifier votre e-mail pour confirmer votre compte. N'oubliez pas de vérifier votre dossier de courriers indésirables ou spam. Une fois confirmé, vous pourrez vous connecter."
   }
 };
 
