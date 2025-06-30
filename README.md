@@ -35,7 +35,7 @@ CondoShield is a mobile-first web application that empowers property owners to t
 
 | Frontend              | Backend / Auth        | AI / NLP                  | Database | Utilities                |
 | --------------------- | --------------------- | ------------------------- | -------- | ------------------------ |
-| NextJS + Tailwind CSS | Supabase (Auth + RLS) | GPT-4o / LLaMA / Azure AI | Supabase | pdf-parse, Recharts, OCR |
+| NextJS + Tailwind CSS | Supabase (Auth + RLS) | GPT-4o / GPT-4.1 / Llama  | Supabase | pdf-parse, Recharts, OCR |
 
 ---
 
