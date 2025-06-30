@@ -33,9 +33,9 @@ CondoShield is a mobile-first web application that empowers property owners to t
 
 ## 🛠️ Tech Stack
 
-| Frontend              | Backend / Auth        | AI / NLP                  | Database | Utilities                |
-| --------------------- | --------------------- | ------------------------- | -------- | ------------------------ |
-| NextJS + Tailwind CSS | Supabase (Auth + RLS) | GPT-4o / GPT-4.1 / Llama  | Supabase | pdf-parse, Recharts, OCR |
+| Frontend              | Backend / Auth        | AI / NLP                 | Database | Utilities                |
+| --------------------- | --------------------- | ------------------------ | -------- | ------------------------ |
+| NextJS + Tailwind CSS | Supabase (Auth + RLS) | GPT-4o / GPT-4.1 / Llama | Supabase | pdf-parse, Recharts, OCR |
 
 ---
 
@@ -48,7 +48,7 @@ CondoShield is a mobile-first web application that empowers property owners to t
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/condoshield.git
+git clone https://github.com/JonathanSolvesProblems/CondoShield.git
 cd condoshield
 ```
 
